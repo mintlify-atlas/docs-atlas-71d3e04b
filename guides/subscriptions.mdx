@@ -1,6 +1,6 @@
 ---
 title: Subscription Plans
-description: Upgrade your SocialiCar experience with Plus and Premium subscription tiers for enhanced visibility and features.
+description: Upgrade your SocialiCar experience with Plan Básico and Premium subscription tiers for enhanced visibility and features.
 ---
 
 ## Overview
@@ -31,7 +31,11 @@ SocialiCar offers three tiers of service:
   Free users can list vehicles and rent cars without any subscription fees. Payment is only for enhanced features.
 </Note>
 
-### Plus Plan - €6.99/month
+### Plan Básico - €6.99/month (displayed) / €9.99/month (charged)
+
+<Warning>
+  The UI displays this plan at €6.99/month, but the payment backend (`iniciar_pago.php`) charges €9.99 for `tipo=basica`. This appears to be a discrepancy in the source code.
+</Warning>
 
 ```html planes.php
 <div class="col-md-5 col-lg-4">

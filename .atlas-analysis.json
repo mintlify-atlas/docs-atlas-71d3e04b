@@ -1,0 +1,90 @@
+{
+  "projectType": "saas",
+  "projectName": "SocialiCar",
+  "projectDescription": "A peer-to-peer car sharing platform connecting vehicle owners with renters, featuring real-time chat, subscription tiers, and integrated payments.",
+  "theme": "palm",
+  "primaryColor": "#24c4d2",
+  "lightColor": "#9be3ea",
+  "darkColor": "#1a9aa5",
+  "navigation": {
+    "tabs": [
+      {
+        "tab": "Documentation",
+        "groups": [
+          {
+            "group": "Getting Started",
+            "pages": [
+              "introduction",
+              "quickstart",
+              "features"
+            ]
+          },
+          {
+            "group": "User Guides",
+            "pages": [
+              "guides/registration",
+              "guides/listing-car",
+              "guides/renting-car",
+              "guides/chat-system",
+              "guides/subscriptions"
+            ]
+          },
+          {
+            "group": "Platform Features",
+            "pages": [
+              "features/search-filters",
+              "features/payment-system",
+              "features/reviews-ratings",
+              "features/user-profiles"
+            ]
+          },
+          {
+            "group": "Technical",
+            "pages": [
+              "technical/architecture",
+              "technical/database-schema",
+              "technical/deployment",
+              "technical/security"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "API Reference",
+        "groups": [
+          {
+            "group": "Core Modules",
+            "pages": [
+              "api/authentication",
+              "api/users",
+              "api/vehicles",
+              "api/reservations",
+              "api/messaging",
+              "api/payments"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "keyFeatures": [
+    "User registration and authentication system",
+    "Vehicle listing and management",
+    "Advanced search with filters (location, price, features)",
+    "Real-time chat between users",
+    "Subscription tiers (Basic, Premium, Plus)",
+    "PayPal payment integration",
+    "Rating and review system",
+    "Responsive design with Bootstrap 5"
+  ],
+  "publicApiSurface": [
+    "User registration and login endpoints",
+    "Vehicle CRUD operations",
+    "Search and filter vehicles",
+    "Create and manage reservations",
+    "Send and receive messages",
+    "Payment processing",
+    "User profile management",
+    "Subscription management"
+  ]
+}

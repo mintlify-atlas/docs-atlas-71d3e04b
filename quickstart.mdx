@@ -1,80 +1,388 @@
 ---
-title: "Quickstart"
-description: "Start building awesome documentation in minutes"
+title: Quickstart Guide
+description: Get started with SocialiCar in minutes - from account creation to your first listing or rental
 ---
 
-## Get started in three steps
+## Welcome to SocialiCar
 
-Get your documentation site running locally and make your first customization.
+This quickstart guide will walk you through creating your account and getting started with SocialiCar, whether you want to list your vehicle for rent or find a car to borrow.
 
-### Step 1: Set up your local environment
+<Info>
+  The entire process takes less than 10 minutes, and you can start earning from your car or booking a vehicle right away!
+</Info>
 
-<AccordionGroup>
-  <Accordion icon="copy" title="Clone your docs locally">
-    During the onboarding process, you created a GitHub repository with your docs content if you didn't already have one. You can find a link to this repository in your [dashboard](https://dashboard.mintlify.com).
-    
-    To clone the repository locally so that you can make and preview changes to your docs, follow the [Cloning a repository](https://docs.github.com/en/repositories/creating-and-managing-repositories/cloning-a-repository) guide in the GitHub docs.
-  </Accordion>
-  <Accordion icon="rectangle-terminal" title="Start the preview server">
-    1. Install the Mintlify CLI: `npm i -g mint`
-    2. Navigate to your docs directory and run: `mint dev`
-    3. Open `http://localhost:3000` to see your docs live!
-    
-    <Tip>Your preview updates automatically as you edit files.</Tip>
-  </Accordion>
-</AccordionGroup>
-
-### Step 2: Deploy your changes
-
-<AccordionGroup>
-  <Accordion icon="github" title="Install our GitHub app">
-    Install the Mintlify GitHub app from your [dashboard](https://dashboard.mintlify.com/settings/organization/github-app).
-    
-    Our GitHub app automatically deploys your changes to your docs site, so you don't need to manage deployments yourself.
-</Accordion>
-<Accordion icon="palette" title="Update your site name and colors">
-    For a first change, let's update the name and colors of your docs site.
-
-    1. Open `docs.json` in your editor.
-    2. Change the `"name"` field to your project name.
-    3. Update the `"colors"` to match your brand.
-    4. Save and see your changes instantly at `http://localhost:3000`.
-
-    <Tip>Try changing the primary color to see an immediate difference!</Tip>
-  </Accordion>
-</AccordionGroup>
-
-### Step 3: Go live
-
-<Accordion icon="rocket" title="Publish your docs">
-  1. Commit and push your changes.
-  2. Your docs will update and be live in moments!
-</Accordion>
-
-## Next steps
-
-Now that you have your docs running, explore these key features:
+## Choose Your Path
 
 <CardGroup cols={2}>
-
-<Card title="Write Content" icon="pen-to-square" href="/essentials/markdown">
-  Learn MDX syntax and start writing your documentation.
-</Card>
-
-<Card title="Customize style" icon="palette" href="/essentials/settings">
-  Make your docs match your brand perfectly.
-</Card>
-
-<Card title="Add code examples" icon="square-code" href="/essentials/code">
-  Include syntax-highlighted code blocks.
-</Card>
-
-<Card title="API documentation" icon="code" href="/api-reference/introduction">
-  Auto-generate API docs from OpenAPI specs.
-</Card>
-
+  <Card
+    title="I Want to List My Car"
+    icon="car"
+    href="#list-your-vehicle"
+  >
+    Earn money by renting out your car
+  </Card>
+  <Card
+    title="I Want to Rent a Car"
+    icon="magnifying-glass"
+    href="#rent-a-vehicle"
+  >
+    Find and book the perfect vehicle
+  </Card>
 </CardGroup>
 
+## Step 1: Create Your Account
+
+<Steps>
+  <Step title="Navigate to Registration">
+    Visit the SocialiCar homepage at [https://socialicar.wuaze.com](https://socialicar.wuaze.com) and click the **Registrarse** (Register) button in the navigation bar.
+  </Step>
+
+  <Step title="Fill Out Your Information">
+    Complete the registration form with your personal details:
+    
+    **Personal Information:**
+    - **Name** - Your first name (letters only)
+    - **Surname** - Your last name (letters only)
+    - **Date of Birth** - You must be 18 or older
+    - **Email** - A valid email address
+    - **Phone** - 9-15 digit phone number
+    
+    **Security:**
+    - **Password** - 7-20 characters with at least:
+      - 1 uppercase letter
+      - 1 lowercase letter
+      - 1 number
+    - **Confirm Password** - Must match your password
+    
+    **Identification:**
+    - **ID Type** - Select DNI, NIE, or NIF
+    - **ID Number** - Your Spanish identification number
+  </Step>
+
+  <Step title="Submit Registration">
+    Click the **Registrarse** button to create your account. You'll be automatically logged in and redirected to the homepage.
+  </Step>
+</Steps>
+
 <Note>
-  **Need help?** See our [full documentation](https://mintlify.com/docs) or join our [community](https://mintlify.com/community).
+  All passwords are securely hashed using BCrypt before storage. Your sensitive information is protected with industry-standard security measures.
 </Note>
+
+## Step 2: Complete Your Profile
+
+After registration, enhance your profile to build trust with the community:
+
+1. **Upload a Profile Photo**
+   - Click on your profile icon
+   - Select **Editar Perfil** (Edit Profile)
+   - Upload a clear photo of yourself
+   - Supported formats: JPEG, PNG, JPG, WebP
+
+2. **Verify Your Identity**
+   - Upload a photo of your identification document
+   - Upload a photo of your driver's license (if listing a car)
+
+<Warning>
+  Identity verification helps build trust in the SocialiCar community and may be required before you can list vehicles or make bookings.
+</Warning>
+
+---
+
+## List Your Vehicle
+
+Ready to earn money from your car? Follow these steps:
+
+<Steps>
+  <Step title="Navigate to Add Vehicle">
+    From your profile page, click **Añadir Coche** (Add Car) or navigate to the vehicle management section.
+  </Step>
+
+  <Step title="Enter Vehicle Details">
+    **Basic Information:**
+    ```text
+    License Plate: 1234ABC (Spanish format)
+    Brand: Select from dropdown (powered by NHTSA API)
+    Model: Auto-populated based on brand
+    Year: Manufacturing year
+    Color: Vehicle color
+    Fuel Type: Gasolina, Diésel, Eléctrico, or Híbrido
+    Transmission: Manual or Automática
+    Vehicle Type: Berlina, SUV, Monovolumen, etc.
+    ```
+    
+    **Location:**
+    - Full address (5-part format: street, number, city, province, postal code)
+    - Parking type: Calle, Garaje, or Aparcamiento
+    
+    **Pricing:**
+    - Daily rate: €15 - €500 per day
+  </Step>
+
+  <Step title="Add Photos">
+    Upload multiple high-quality photos of your vehicle:
+    - Exterior views (front, back, sides)
+    - Interior shots
+    - Any special features
+    - Maximum file size: Check system limits
+  </Step>
+
+  <Step title="Select Features">
+    Check all applicable features your vehicle has:
+    
+    **Driving Assistance:**
+    - GPS
+    - Parking sensors
+    - Backup camera
+    - Cruise control
+    - 4x4 traction
+    
+    **Technology:**
+    - Bluetooth
+    - WiFi
+    - Android Auto
+    - Apple CarPlay
+    
+    **Comfort:**
+    - Air conditioning
+    - Heated seats
+    - ISOFIX child seat anchors
+    - Accessibility features
+    
+    **Accessories:**
+    - Roof rack
+    - Bike carrier
+    - Ski rack
+    - Tow hitch
+    
+    **Policies:**
+    - Allow pets
+    - Allow smoking
+  </Step>
+
+  <Step title="Publish Your Listing">
+    Review all information and click **Guardar** (Save) to publish your listing. Your car will appear in search results immediately!
+  </Step>
+</Steps>
+
+<Tip>
+  Consider upgrading to a **Plus** (€6.99/month) or **Premium** (€19.99/month) subscription for priority placement in search results and enhanced visibility!
+</Tip>
+
+---
+
+## Rent a Vehicle
+
+Looking for a car to rent? Here's how to find and book:
+
+<Steps>
+  <Step title="Search for Vehicles">
+    On the homepage, use the search form to find available cars:
+    
+    ```html
+    Location: Select from Málaga, Granada, Madrid, Valencia, Barcelona
+    Start Date: When you need the car
+    End Date: When you'll return it
+    ```
+    
+    Click **Buscar** (Search) to see available vehicles.
+  </Step>
+
+  <Step title="Browse and Filter">
+    **Use the Filter Panel:**
+    - Brand and Model
+    - Vehicle Type
+    - Fuel Type
+    - Price Range (€0-€500)
+    - Equipment Features (GPS, Bluetooth, A/C, etc.)
+    
+    **Use Text Search:**
+    Search across brand, model, city, postal code, color, description, fuel type, transmission, and more.
+  </Step>
+
+  <Step title="View Vehicle Details">
+    Click on any vehicle card to see:
+    - Detailed specifications
+    - Owner information
+    - Location and parking details
+    - All available features
+    - Reviews and ratings
+    - High-resolution photos
+  </Step>
+
+  <Step title="Contact the Owner">
+    Click the **Chat** button to:
+    - Ask questions about the vehicle
+    - Discuss pickup/dropoff details
+    - Negotiate pricing for longer rentals
+    - Confirm availability
+  </Step>
+
+  <Step title="Complete Your Booking">
+    Once you've agreed with the owner:
+    
+    1. Confirm the rental dates
+    2. Click **Reserve** or **Book Now**
+    3. Complete payment through PayPal
+    4. Receive booking confirmation
+  </Step>
+
+  <Step title="Pick Up Your Vehicle">
+    - Meet the owner at the agreed location
+    - Inspect the vehicle together
+    - Document any existing damage
+    - Receive keys and any instructions
+    - Start your trip!
+  </Step>
+</Steps>
+
+## Payment & Pricing
+
+<Tabs>
+  <Tab title="For Renters">
+    **Payment Process:**
+    - All payments are processed securely through PayPal
+    - You'll be charged for the number of days you book
+    - Calculation: Daily Rate × Number of Days
+    
+    **Example:**
+    ```text
+    Daily Rate: €45/day
+    Rental Period: 3 days
+    Total Cost: €45 × 3 = €135
+    ```
+    
+    **What's Included:**
+    - Vehicle rental for specified dates
+    - Basic insurance (check with owner)
+    - Owner support during rental
+  </Tab>
+  
+  <Tab title="For Owners">
+    **Setting Your Price:**
+    - Minimum: €15/day
+    - Maximum: €500/day
+    - Consider: Vehicle type, features, location, demand
+    
+    **Pricing Tips:**
+    - Research similar vehicles in your area
+    - Offer weekly/monthly discounts
+    - Adjust for peak seasons
+    - Premium members get better visibility
+    
+    **Receiving Payments:**
+    - Payments processed through PayPal
+    - Funds transferred after booking confirmation
+    - Platform fee: (Check current rates)
+  </Tab>
+</Tabs>
+
+## Subscription Plans
+
+Boost your listings with a subscription:
+
+<CardGroup cols={3}>
+  <Card title="Free" icon="car">
+    **€0/month**
+    - List your vehicles
+    - Basic search placement
+    - Standard support
+    - Message system
+  </Card>
+  
+  <Card title="Plus" icon="star">
+    **€6.99/month**
+    - Everything in Free
+    - Higher search ranking
+    - Multiple vehicle listings
+    - Enhanced visibility
+    - Priority support
+  </Card>
+  
+  <Card title="Premium" icon="crown">
+    **€19.99/month**
+    - Everything in Plus
+    - Top search placement
+    - Gold border on listings
+    - Premium badge
+    - Featured listings
+    - Priority customer service
+  </Card>
+</CardGroup>
+
+See detailed comparison in the [Subscriptions Guide](/guides/subscriptions).
+
+## Communication
+
+<Accordion title="Using the Chat System">
+  SocialiCar includes a built-in messaging system:
+  
+  - **Real-time updates** - Messages refresh automatically
+  - **Conversation history** - Access past messages anytime
+  - **Vehicle context** - Chat directly from vehicle listings
+  - **Online status** - See when users are active
+  - **Notifications** - Get alerted to new messages
+  
+  Learn more in the [Chat System Guide](/guides/chat-system).
+</Accordion>
+
+<Accordion title="Safety Tips">
+  **For Renters:**
+  - Read owner reviews before booking
+  - Inspect the vehicle before driving
+  - Document any pre-existing damage
+  - Follow the owner's rules and policies
+  - Return the vehicle on time and in good condition
+  
+  **For Owners:**
+  - Verify renter's identity and license
+  - Take photos before and after rental
+  - Set clear expectations and rules
+  - Keep detailed rental records
+  - Report any issues immediately
+</Accordion>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card
+    title="Explore All Features"
+    icon="grid"
+    href="/features"
+  >
+    Discover everything SocialiCar has to offer
+  </Card>
+  <Card
+    title="User Guides"
+    icon="book"
+    href="/guides/registration"
+  >
+    Deep dive into specific features
+  </Card>
+  <Card
+    title="Technical Docs"
+    icon="code"
+    href="/technical/architecture"
+  >
+    Learn about the platform architecture
+  </Card>
+  <Card
+    title="API Reference"
+    icon="terminal"
+    href="/api/authentication"
+  >
+    Integrate with SocialiCar APIs
+  </Card>
+</CardGroup>
+
+## Need Help?
+
+<Note>
+  If you encounter any issues or have questions, check out our comprehensive guides or contact our support team through the platform.
+</Note>
+
+**Quick Links:**
+- [Registration Guide](/guides/registration) - Detailed registration walkthrough
+- [Listing Your Car](/guides/listing-car) - Complete vehicle listing guide
+- [Renting a Car](/guides/renting-car) - Full rental process guide
+- [Payment System](/features/payment-system) - Payment and security information
+- [Security](/technical/security) - Platform security features

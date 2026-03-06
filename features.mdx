@@ -1,0 +1,275 @@
+---
+title: Platform Features
+description: Explore all the features that make SocialiCar a comprehensive car sharing platform
+---
+
+## Core Features Overview
+
+SocialiCar provides a complete ecosystem for peer-to-peer car sharing with powerful features for both vehicle owners and renters.
+
+<CardGroup cols={2}>
+  <Card
+    title="User Registration & Authentication"
+    icon="user-plus"
+    href="/guides/registration"
+  >
+    Secure account creation with email verification and Spanish ID validation (DNI/NIE/NIF)
+  </Card>
+  <Card
+    title="Vehicle Listings"
+    icon="car"
+    href="/guides/listing-car"
+  >
+    Comprehensive vehicle management with photos, specifications, and pricing control
+  </Card>
+  <Card
+    title="Advanced Search"
+    icon="magnifying-glass"
+    href="/features/search-filters"
+  >
+    Search by location, dates, price range, and 20+ vehicle features
+  </Card>
+  <Card
+    title="Real-Time Chat"
+    icon="comments"
+    href="/guides/chat-system"
+  >
+    Built-in messaging system for direct communication between users
+  </Card>
+  <Card
+    title="Secure Payments"
+    icon="credit-card"
+    href="/features/payment-system"
+  >
+    PayPal integration for safe transactions and subscription management
+  </Card>
+  <Card
+    title="Subscription Tiers"
+    icon="star"
+    href="/guides/subscriptions"
+  >
+    Free, Plus, and Premium plans with enhanced visibility for listings
+  </Card>
+  <Card
+    title="Reviews & Ratings"
+    icon="star-half-stroke"
+    href="/features/reviews-ratings"
+  >
+    5-star rating system to build trust in the community
+  </Card>
+  <Card
+    title="User Profiles"
+    icon="id-card"
+    href="/features/user-profiles"
+  >
+    Detailed profiles with photo, vehicle management, and favorites
+  </Card>
+</CardGroup>
+
+## For Vehicle Owners
+
+<Accordion title="List Your Vehicle">
+  - Upload multiple photos of your car
+  - Set your own pricing (€15-€500/day)
+  - Specify 20+ vehicle features (GPS, Bluetooth, A/C, etc.)
+  - Define your availability schedule
+  - Choose your parking location type
+  - Full control over booking requests
+</Accordion>
+
+<Accordion title="Manage Bookings">
+  - View incoming rental requests
+  - Accept or decline bookings
+  - Communicate with renters via chat
+  - Set minimum and maximum rental periods
+  - Update availability in real-time
+</Accordion>
+
+<Accordion title="Earn Income">
+  - Keep majority of rental fees
+  - Set custom pricing based on demand
+  - Offer weekly or monthly discounts
+  - Track earnings through dashboard
+  - Receive payments via PayPal
+</Accordion>
+
+<Accordion title="Premium Features">
+  - Priority placement in search results
+  - Gold border highlighting on listings
+  - Premium badge visibility
+  - Extended photo galleries
+  - Priority customer support
+</Accordion>
+
+## For Renters
+
+<Accordion title="Find the Perfect Car">
+  - Search by city and province
+  - Filter by dates and availability
+  - Browse by vehicle type (SUV, Sedan, Van, etc.)
+  - Filter by fuel type (Electric, Hybrid, Gas, Diesel)
+  - Set price range preferences
+  - Check 20+ equipment features
+</Accordion>
+
+<Accordion title="Book with Confidence">
+  - View detailed vehicle specifications
+  - Read reviews from previous renters
+  - See high-quality photos
+  - Check real-time availability
+  - Communicate directly with owner
+  - Secure payment processing
+</Accordion>
+
+<Accordion title="During Your Rental">
+  - Access owner contact information
+  - Chat support for questions
+  - Vehicle location and pickup details
+  - Insurance information
+  - 24/7 platform support
+</Accordion>
+
+<Accordion title="After Your Trip">
+  - Leave reviews and ratings
+  - Report any issues
+  - Save favorite vehicles
+  - Rebook easily for next trip
+</Accordion>
+
+## Technical Capabilities
+
+<Tabs>
+  <Tab title="Search & Discovery">
+    - Full-text search across 11 vehicle attributes
+    - Real-time availability checking
+    - Date range conflict detection
+    - Subscription-based ranking (Premium > Plus > Standard)
+    - Location-based filtering
+    - Multi-criteria advanced filters
+  </Tab>
+  
+  <Tab title="Communication">
+    - Real-time messaging system
+    - Conversation history
+    - Online/offline status indicators
+    - Message notifications
+    - Vehicle context in chats
+    - Self-messaging prevention
+  </Tab>
+  
+  <Tab title="Payment Processing">
+    - PayPal Express Checkout
+    - Secure payment sessions
+    - Subscription management
+    - Variable rental pricing
+    - Transaction history
+    - Refund handling
+  </Tab>
+  
+  <Tab title="Data Management">
+    - MySQL database with prepared statements
+    - Input validation and sanitization
+    - File upload management
+    - Image optimization
+    - Session security
+    - CSRF protection
+  </Tab>
+</Tabs>
+
+## Security Features
+
+<CardGroup cols={3}>
+  <Card title="Password Security" icon="lock">
+    BCrypt hashing with complexity requirements
+  </Card>
+  <Card title="Input Validation" icon="shield-check">
+    Server-side validation for all user inputs
+  </Card>
+  <Card title="SQL Injection Prevention" icon="database">
+    Prepared statements for all database queries
+  </Card>
+  <Card title="XSS Protection" icon="code">
+    Output escaping with htmlspecialchars()
+  </Card>
+  <Card title="File Upload Security" icon="file-arrow-up">
+    MIME type validation and size limits
+  </Card>
+  <Card title="Session Management" icon="key">
+    Secure session handling with httponly cookies
+  </Card>
+</CardGroup>
+
+## Integration Features
+
+<Steps>
+  <Step title="NHTSA Vehicle API">
+    Automatic vehicle make and model data fetching from the U.S. National Highway Traffic Safety Administration API
+  </Step>
+  
+  <Step title="PayPal Payment Gateway">
+    Complete payment processing integration with PayPal Express Checkout for rentals and subscriptions
+  </Step>
+  
+  <Step title="Google Maps">
+    Location services for address validation and mapping vehicle locations
+  </Step>
+  
+  <Step title="PHPMailer">
+    Email notifications for registrations, bookings, and important account updates
+  </Step>
+</Steps>
+
+## Responsive Design
+
+SocialiCar is fully responsive and optimized for all devices:
+
+- **Desktop**: Full-featured interface with multi-column layouts
+- **Tablet**: Optimized views with collapsible navigation
+- **Mobile**: Touch-friendly interface with bottom navigation
+- **All Devices**: Bootstrap 5 responsive grid system
+
+## Accessibility Features
+
+<Note>
+  SocialiCar follows web accessibility best practices to ensure the platform is usable by everyone.
+</Note>
+
+- Semantic HTML structure
+- ARIA labels for screen readers
+- Keyboard navigation support
+- High contrast text and UI elements
+- Responsive font sizing
+- Form validation feedback
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card
+    title="Get Started"
+    icon="rocket"
+    href="/quickstart"
+  >
+    Follow our quickstart guide to create your account
+  </Card>
+  <Card
+    title="Explore User Guides"
+    icon="book"
+    href="/guides/registration"
+  >
+    Learn how to use all platform features
+  </Card>
+  <Card
+    title="Technical Documentation"
+    icon="code"
+    href="/technical/architecture"
+  >
+    Understand the platform architecture
+  </Card>
+  <Card
+    title="API Reference"
+    icon="brackets-curly"
+    href="/api/authentication"
+  >
+    Integrate with SocialiCar APIs
+  </Card>
+</CardGroup>

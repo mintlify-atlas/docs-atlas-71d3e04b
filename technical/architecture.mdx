@@ -1,0 +1,325 @@
+---
+title: 'System Architecture'
+description: 'Technical architecture overview of the SocialiCar peer-to-peer car sharing platform'
+---
+
+## Overview
+
+SocialiCar is a PHP-based peer-to-peer car sharing platform that connects vehicle owners with renters. The application follows a traditional LAMP stack architecture with modern security practices and external API integrations.
+
+<Info>
+  SocialiCar is built using PHP 7.4+ with MySQLi for database operations and follows a modular MVC-inspired structure.
+</Info>
+
+## Technology Stack
+
+### Core Technologies
+
+<CardGroup cols={2}>
+  <Card title="Backend" icon="server">
+    - **Language**: PHP 7.4+
+    - **Database Driver**: MySQLi
+    - **Session Management**: Native PHP Sessions
+  </Card>
+  
+  <Card title="Frontend" icon="browser">
+    - **Framework**: Bootstrap 5.3
+    - **Icons**: Font Awesome 6.0
+    - **JavaScript**: Vanilla JS + PayPal SDK
+  </Card>
+  
+  <Card title="Database" icon="database">
+    - **DBMS**: MySQL/MariaDB
+    - **Connection**: MySQLi with Prepared Statements
+    - **Configuration**: Environment-based (.env)
+  </Card>
+  
+  <Card title="Web Server" icon="globe">
+    - **Server**: Apache with mod_rewrite
+    - **URL Rewriting**: .htaccess configuration
+    - **Security**: Directory indexing disabled
+  </Card>
+</CardGroup>
+
+## Application Structure
+
+### Directory Organization
+
+```plaintext
+source/
+├── index.php                    # Main landing page
+├── .htaccess                    # Apache configuration & security
+├── .env                         # Database credentials (gitignored)
+├── src/
+│   ├── components/              # Reusable UI components
+│   │   ├── navbar.php
+│   │   ├── footer.php
+│   │   ├── links.php           # Common CSS/JS imports
+│   │   └── correo/             # PHPMailer email library
+│   ├── config/                 # Configuration files
+│   │   ├── conexion.php        # Database connection
+│   │   └── depurar.php         # Input sanitization
+│   ├── pages/                  # Application pages
+│   │   ├── usuario/            # User authentication & profiles
+│   │   ├── coche/              # Vehicle management
+│   │   ├── rentacar/           # Car browsing & rental
+│   │   ├── chat/               # Real-time messaging
+│   │   ├── pago/               # Payment processing
+│   │   ├── informacion/        # Legal & informational pages
+│   │   └── error/              # Error pages (403, 404)
+│   ├── img/                    # Static images
+│   ├── js/                     # JavaScript files
+│   ├── styles/                 # CSS stylesheets
+│   └── fonts/                  # Custom fonts
+└── clients/                     # User-uploaded content
+    └── img/
+        └── {user_id}/
+            └── coche/
+                └── {matricula}/
+```
+
+<Accordion title="View Component Details">
+  - **components/**: Reusable PHP includes for navigation, footer, and common imports
+  - **config/**: Database connection and utility functions
+  - **pages/**: Feature-specific page modules organized by domain
+  - **clients/**: Dynamic user-uploaded files with structured organization
+</Accordion>
+
+## Database Connection
+
+The application uses a centralized database connection pattern:
+
+```php src/config/conexion.php
+<?php
+    $env = parse_ini_file(__DIR__ . '/../../.env');
+    $_servidor = $env['BBDD_SERVER'];
+    $_usuario = $env['BBDD_USER'];
+    $_contrasena = $env['BBDD_PASS'];
+    $_base_de_datos = $env['BBDD_NAME'];
+
+    $_conexion = new Mysqli($_servidor, $_usuario, $_contrasena, $_base_de_datos);
+    
+    if ($_conexion -> connect_error) {
+        die("Error de conexión: " . $_conexion->connect_error);
+    } else {
+        echo "<script>console.log('Conexión exitosa');</script>";
+    }
+?>
+```
+
+<Warning>
+  Database credentials are stored in `.env` file which must be excluded from version control.
+</Warning>
+
+## Core Modules
+
+### 1. User Management (`src/pages/usuario/`)
+
+Handles user registration, authentication, and profile management.
+
+**Key Features:**
+- User registration with validation
+- Email-based login system
+- Password hashing with `password_hash()`
+- Profile editing and photo uploads
+- Subscription plans (Basic, Plus, Premium)
+
+**Files:**
+- `registro.php` - User registration
+- `iniciar_sesion.php` - Login
+- `perfil_usuario.php` - Profile management
+- `planes.php` - Subscription plans
+- `cerrar_sesion.php` - Logout
+
+### 2. Vehicle Management (`src/pages/coche/`)
+
+Allows vehicle owners to list and manage their cars.
+
+**Key Features:**
+- Vehicle registration with external API validation
+- Multi-image upload support
+- Location-based parking information
+- Extensive feature checklist (GPS, WiFi, etc.)
+- Price setting (€15-500/day)
+
+**API Integration:**
+```php
+// NHTSA Vehicle API for brand/model validation
+$apiUrlMarcas = "https://vpic.nhtsa.dot.gov/api/vehicles/GetMakesForVehicleType/car?format=json";
+```
+
+**Files:**
+- `nuevo_coche.php` - Add new vehicle
+- `editar_coche.php` - Edit existing vehicle
+- `eliminar_coche.php` - Delete vehicle
+- `obtener_modelos.php` - AJAX endpoint for car models
+
+### 3. Rental System (`src/pages/rentacar/`)
+
+Enables users to search, browse, and rent vehicles.
+
+**Key Features:**
+- Advanced filtering (location, price, dates, features)
+- Premium/Plus/Standard tier listings
+- Availability checking
+- Date-based reservations
+
+**Search Algorithm:**
+The system prioritizes listings based on subscription tier:
+1. **Premium** - Top 3 results with special badge
+2. **Plus** - Next 6 results
+3. **Standard** - Remaining results
+
+### 4. Messaging System (`src/pages/chat/`)
+
+Real-time chat between renters and vehicle owners.
+
+**Architecture:**
+- AJAX-based message polling
+- Message history retrieval
+- User online/offline status
+- Conversation threading
+
+**Files:**
+- `conversa.php` - Chat interface
+- `send_message.php` - Message sending endpoint
+- `get_messages.php` - Message retrieval endpoint
+
+### 5. Payment Processing (`src/pages/pago/`)
+
+Handles all financial transactions through PayPal.
+
+**Integration:**
+```javascript
+paypal.Buttons({
+    createOrder: function(data, actions){
+        return actions.order.create({
+            purchase_units:[{
+                amount: { value: precio },
+                description: concepto
+            }] 
+        });
+    },
+    onApprove: function(data, actions){ /* ... */ }
+}).render('#paypal-button-container');
+```
+
+**Payment Types:**
+- Car rentals (variable pricing)
+- Subscription plans (€9.99, €19.99)
+
+## URL Routing
+
+Apache mod_rewrite is used for clean URLs:
+
+```apache .htaccess
+# Remove .php extension
+RewriteCond %{REQUEST_FILENAME}.php -f
+RewriteRule ^(.+)$ $1.php [QSA,L]
+```
+
+**Examples:**
+- `/src/pages/usuario/registro` → `registro.php`
+- `/src/pages/rentacar/coche?matricula=1234ABC` → `coche.php?matricula=1234ABC`
+
+## Security Layers
+
+<Steps>
+  <Step title="Input Sanitization">
+    All user input passes through the `depurar()` function:
+    
+    ```php
+    function depurar(string $entrada) : string {
+        $salida = htmlspecialchars($entrada);
+        $salida = trim($salida);
+        $salida = stripslashes($salida);
+        $salida = preg_replace('!\s!', ' ', $salida);
+        return $salida;
+    }
+    ```
+  </Step>
+  
+  <Step title="SQL Injection Prevention">
+    All database queries use prepared statements:
+    
+    ```php
+    $sql = $_conexion->prepare("SELECT * FROM usuario WHERE correo = ?");
+    $sql->bind_param("s", $correo);
+    $sql->execute();
+    ```
+  </Step>
+  
+  <Step title="Session Management">
+    PHP sessions are used for authentication state:
+    
+    ```php
+    session_start();
+    if (!isset($_SESSION['usuario'])) {
+        header("Location: ../../../");
+        exit();
+    }
+    ```
+  </Step>
+  
+  <Step title="File Access Control">
+    .htaccess blocks access to sensitive files:
+    
+    ```apache
+    <FilesMatch "^(\.env|.*\.json)$">
+      Order allow,deny
+      Deny from all
+    </FilesMatch>
+    ```
+  </Step>
+</Steps>
+
+## External Dependencies
+
+<CardGroup cols={2}>
+  <Card title="PHPMailer" icon="envelope">
+    Email sending library for notifications
+  </Card>
+  
+  <Card title="PayPal SDK" icon="credit-card">
+    Payment processing integration
+  </Card>
+  
+  <Card title="NHTSA API" icon="car">
+    Vehicle make/model validation
+  </Card>
+  
+  <Card title="Google Maps" icon="map">
+    Location autocomplete and geocoding
+  </Card>
+</CardGroup>
+
+## Performance Considerations
+
+- **Image Storage**: User uploads are organized by user ID and vehicle license plate
+- **Database Indexing**: Primary keys on `matricula` (license plate) and `identificacion` (user ID)
+- **Query Optimization**: JOINs used for fetching related data (users, subscriptions, vehicles)
+- **Caching**: Session storage for user data to reduce database queries
+
+## Deployment Requirements
+
+<Check>PHP 7.4 or higher</Check>
+<Check>MySQL 5.7+ or MariaDB 10.3+</Check>
+<Check>Apache with mod_rewrite enabled</Check>
+<Check>Write permissions on `/clients/` directory</Check>
+<Check>SSL certificate for production (PayPal requirement)</Check>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Database Schema" icon="database" href="/technical/database-schema">
+    Explore the complete database structure
+  </Card>
+  
+  <Card title="Security" icon="shield" href="/technical/security">
+    Learn about security implementations
+  </Card>
+  
+  <Card title="Deployment" icon="rocket" href="/technical/deployment">
+    Deploy SocialiCar to production
+  </Card>
+</CardGroup>

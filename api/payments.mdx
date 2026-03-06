@@ -1,0 +1,421 @@
+---
+title: 'Payments API'
+description: 'Payment processing endpoints for vehicle rentals and subscriptions'
+---
+
+## Overview
+
+The Payments API handles payment processing for vehicle rentals and user subscriptions through PayPal integration.
+
+## Initialize Payment
+
+Initialize a payment session for vehicle rental or subscription.
+
+**Endpoint:** `GET /src/pages/pago/iniciar_pago.php`
+
+### Authentication
+
+Requires active session. Redirects to home page if not authenticated.
+
+```php
+if (!isset($_SESSION['usuario'])) {
+    header("Location: ../../../");
+    exit();
+}
+```
+
+### Query Parameters
+
+<ParamField query="tipo" type="string" required>
+  Type of payment. Valid values: `coche`, `basica`, `premium`
+</ParamField>
+
+<ParamField query="precio_coche" type="float">
+  Total rental price for vehicle (only when `tipo=coche`)
+</ParamField>
+
+---
+
+## Vehicle Rental Payment
+
+Process payment for a vehicle rental.
+
+**Payment Type:** `tipo=coche`
+
+### Request Parameters
+
+<ParamField query="tipo" type="string" required>
+  Must be `coche`
+</ParamField>
+
+<ParamField query="precio_coche" type="float" required>
+  Total rental price in euros. Must be numeric.
+</ParamField>
+
+### Session Storage
+
+```php
+$precio_coche = floatval($_GET['precio_coche']);
+$_SESSION['precio_pago'] = $precio_coche;
+$_SESSION['concepto_pago'] = "Pago de Alquiler de coche";
+```
+
+### Example Request
+
+```
+GET /src/pages/pago/iniciar_pago.php?tipo=coche&precio_coche=315.00
+```
+
+### Calculation Example
+
+For a 7-day rental at €45/day:
+
+```php
+$dias = 7;
+$precio_diario = 45.00;
+$precio_total = $dias * $precio_diario; // 315.00
+
+header("Location: iniciar_pago.php?tipo=coche&precio_coche=" . $precio_total);
+```
+
+### Response
+
+Redirects to PayPal payment page:
+```
+Location: paypal.php?page=
+```
+
+---
+
+## Subscription Payment
+
+Process payment for a user subscription plan.
+
+### Basic Subscription
+
+**Payment Type:** `tipo=basica`
+
+<ParamField query="tipo" type="string" required>
+  Must be `basica`
+</ParamField>
+
+#### Pricing
+
+```php
+$_SESSION['precio_pago'] = 9.99;
+$_SESSION['concepto_pago'] = "Pago de Suscripción Básica";
+```
+
+#### Example Request
+
+```
+GET /src/pages/pago/iniciar_pago.php?tipo=basica
+```
+
+#### Response
+
+Redirects to PayPal:
+```
+Location: paypal.php?page=planes
+```
+
+### Premium Subscription
+
+**Payment Type:** `tipo=premium`
+
+<ParamField query="tipo" type="string" required>
+  Must be `premium`
+</ParamField>
+
+#### Pricing
+
+```php
+$_SESSION['precio_pago'] = 19.99;
+$_SESSION['concepto_pago'] = "Pago de Suscripción Premium";
+```
+
+#### Example Request
+
+```
+GET /src/pages/pago/iniciar_pago.php?tipo=premium
+```
+
+#### Response
+
+Redirects to PayPal:
+```
+Location: paypal.php?page=planes
+```
+
+---
+
+## Subscription Tiers
+
+### Basic Subscription - €9.99
+
+<ResponseField name="price" type="float">
+  9.99 EUR
+</ResponseField>
+
+<ResponseField name="features" type="array">
+  Standard subscription features
+  
+  <Expandable title="Basic Features">
+    - List vehicles on platform
+    - Standard search visibility
+    - Basic customer support
+    - Profile customization
+  </Expandable>
+</ResponseField>
+
+### Premium Subscription - €19.99
+
+<ResponseField name="price" type="float">
+  19.99 EUR
+</ResponseField>
+
+<ResponseField name="features" type="array">
+  Enhanced subscription features
+  
+  <Expandable title="Premium Features">
+    - All Basic features
+    - Top search result placement
+    - Special badge on listings
+    - Limited to 3 priority slots
+    - Enhanced visibility
+    - Priority customer support
+  </Expandable>
+</ResponseField>
+
+### Plus Subscription
+
+<ResponseField name="price" type="float">
+  Price tier between Basic and Premium
+</ResponseField>
+
+<ResponseField name="features" type="array">
+  Mid-tier subscription features
+  
+  <Expandable title="Plus Features">
+    - All Basic features
+    - Medium search priority
+    - Up to 6 priority slots
+    - Enhanced support
+  </Expandable>
+</ResponseField>
+
+---
+
+## Payment Processing Flow
+
+### Step 1: Initialize Payment
+
+```php
+// User clicks "Pay" button
+GET /src/pages/pago/iniciar_pago.php?tipo=coche&precio_coche=315.00
+```
+
+### Step 2: Store Payment Data
+
+```php
+// Session variables set
+$_SESSION['precio_pago'] = 315.00;
+$_SESSION['concepto_pago'] = "Pago de Alquiler de coche";
+```
+
+### Step 3: Redirect to PayPal
+
+```php
+header("Location: paypal.php?page=");
+```
+
+### Step 4: PayPal Processing
+
+User completes payment on PayPal's secure platform.
+
+### Step 5: Return to Platform
+
+After payment, PayPal redirects back with transaction details.
+
+---
+
+## PayPal Integration
+
+**Endpoint:** `/src/pages/pago/paypal.php`
+
+### Query Parameters
+
+<ParamField query="page" type="string">
+  Return page after payment completion. Empty for vehicle rentals, `planes` for subscriptions.
+</ParamField>
+
+### Session Variables Used
+
+<ResponseField name="$_SESSION['precio_pago']" type="float">
+  Payment amount in EUR
+</ResponseField>
+
+<ResponseField name="$_SESSION['concepto_pago']" type="string">
+  Payment description/concept for PayPal transaction
+</ResponseField>
+
+<ResponseField name="$_SESSION['usuario']" type="array">
+  Current user information for payment processing
+</ResponseField>
+
+---
+
+## Error Handling
+
+### Invalid Payment Type
+
+```php
+default:
+    die("Tipo de suscripción no válido");
+```
+
+### Invalid Vehicle Price
+
+```php
+if (!isset($_GET['precio_coche']) || !is_numeric($_GET['precio_coche'])) {
+    die("Precio del coche inválido");
+}
+```
+
+### Missing Authentication
+
+```php
+if (!isset($_SESSION['usuario'])) {
+    header("Location: ../../../");
+    exit();
+}
+```
+
+### Invalid Request
+
+```php
+if (!isset($_GET['tipo'])) {
+    die("Solicitud inválida");
+}
+```
+
+---
+
+## Rental Price Calculation
+
+Vehicle rental prices are calculated based on:
+
+### Formula
+
+```php
+$precio_total = $precio_diario * $numero_dias;
+```
+
+### Example Calculation
+
+<Expandable title="7-day rental at €45/day">
+  ```php
+  $fecha_inicio = '2024-12-20';
+  $fecha_fin = '2024-12-27';
+  $precio_diario = 45.00;
+  
+  $inicio = new DateTime($fecha_inicio);
+  $fin = new DateTime($fecha_fin);
+  $diferencia = $inicio->diff($fin);
+  $dias = $diferencia->days; // 7
+  
+  $precio_total = $precio_diario * $dias; // 315.00
+  ```
+</Expandable>
+
+<Expandable title="3-day weekend rental at €60/day">
+  ```php
+  $fecha_inicio = '2024-12-13';
+  $fecha_fin = '2024-12-16';
+  $precio_diario = 60.00;
+  
+  $dias = 3;
+  $precio_total = $precio_diario * $dias; // 180.00
+  ```
+</Expandable>
+
+---
+
+## Database Updates
+
+After successful payment, the following database updates occur:
+
+### Vehicle Rental
+
+```sql
+-- Create reservation record
+INSERT INTO reserva_coche (
+    matricula, 
+    id_usuario_reserva, 
+    fecha_inicio, 
+    fecha_final, 
+    precio_total,
+    estado_pago
+) VALUES (?, ?, ?, ?, ?, 'completado')
+```
+
+### Subscription Activation
+
+```sql
+-- Update or insert subscription
+INSERT INTO suscripcion_usuario (
+    identificacion,
+    tipo,
+    activo,
+    fecha_inicio,
+    fecha_fin
+) VALUES (?, ?, TRUE, NOW(), DATE_ADD(NOW(), INTERVAL 1 MONTH))
+ON DUPLICATE KEY UPDATE
+    activo = TRUE,
+    fecha_inicio = NOW(),
+    fecha_fin = DATE_ADD(NOW(), INTERVAL 1 MONTH)
+```
+
+---
+
+## Payment Concepts
+
+<ResponseField name="Pago de Alquiler de coche" type="concept">
+  Vehicle rental payment. Amount varies based on rental duration and daily price.
+</ResponseField>
+
+<ResponseField name="Pago de Suscripción Básica" type="concept">
+  Basic subscription payment. Fixed at €9.99.
+</ResponseField>
+
+<ResponseField name="Pago de Suscripción Premium" type="concept">
+  Premium subscription payment. Fixed at €19.99.
+</ResponseField>
+
+---
+
+## Security Considerations
+
+### Price Validation
+
+```php
+// Ensure numeric values
+$precio = floatval($_GET['precio_coche']);
+
+// Validate against minimum/maximum
+if ($precio < 0 || $precio > 10000) {
+    die("Precio fuera de rango válido");
+}
+```
+
+### Session Security
+
+- Payment data stored in session only
+- Session cleared after payment completion
+- User authentication required for all payments
+
+### PayPal Integration
+
+- All payment processing handled by PayPal's secure platform
+- No credit card data stored on SocialiCar servers
+- Transaction verification through PayPal API

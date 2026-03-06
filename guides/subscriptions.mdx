@@ -1,0 +1,422 @@
+---
+title: Subscription Plans
+description: Upgrade your SocialiCar experience with Plus and Premium subscription tiers for enhanced visibility and features.
+---
+
+## Overview
+
+SocialiCar offers subscription plans to help car owners maximize their rental opportunities. Premium tiers provide increased visibility, unlimited listings, and exclusive features.
+
+<Info>
+  Subscription benefits include priority placement in search results, increased ad limits, and access to premium support.
+</Info>
+
+## Available Plans
+
+SocialiCar offers three tiers of service:
+
+### Free Plan (Basic)
+
+<Card title="Basic Features" icon="user">
+  Available to all registered users without subscription
+  
+  **Includes:**
+  - Vehicle location services
+  - List up to 3 vehicles
+  - Standard search visibility
+  - Basic support
+</Card>
+
+<Note>
+  Free users can list vehicles and rent cars without any subscription fees. Payment is only for enhanced features.
+</Note>
+
+### Plus Plan - €6.99/month
+
+```html planes.php
+<div class="col-md-5 col-lg-4">
+    <div class="plan-card basic-plan">
+        <div class="plan-header">
+            <h3 class="plan-title">Plan Básico</h3>
+            <div class="plan-price">6,99€ <span>/ mes</span></div>
+        </div>
+        <div class="plan-body">
+            <ul class="plan-features">
+                <li><i class="fas fa-check-circle feature-icon" style="color: #C4EEF2"></i> Localización de tu vehículo</li>
+                <li><i class="fas fa-check-circle feature-icon" style="color: #C4EEF2"></i> Promociona hasta 3 anuncios</li>
+                <li><i class="fas fa-times-circle feature-icon" style="color: #ff4757"></i> Sin acceso a soporte premium</li>
+                <li><i class="fas fa-times-circle feature-icon" style="color: #ff4757"></i> Sin prioridad en las reservas</li>
+                <li><i class="fas fa-times-circle feature-icon" style="color: #ff4757"></i> Sin ofertas exclusivas</li>
+            </ul>
+            <a href="#.php?tipo=basica" class="btn btn-basic btn-plan suscribirse" 
+               style="background-color: #C4EEF2; color:#333; margin-top:12vh">Suscribirse</a>
+        </div>
+    </div>
+</div>
+```
+
+**Features:**
+
+<CardGroup cols={2}>
+  <Card title="Included" icon="check">
+    - Vehicle GPS tracking
+    - Up to 3 active listings
+    - Basic support
+  </Card>
+  <Card title="Not Included" icon="x">
+    - Premium support access
+    - Booking priority
+    - Exclusive offers
+  </Card>
+</CardGroup>
+
+### Premium Plan - €19.99/month (Recommended)
+
+```html planes.php
+<div class="premium col-md-5 col-lg-4 position-relative">
+    <div class="recomendado recommended-badge animate__animated animate__pulse animate__infinite">Recomendado</div>
+    <div class="plan-card premium-plan">
+        <div class="plan-header">
+            <h3 class="plan-title">Plan Premium</h3>
+            <div class="plan-price">
+                19,99€ <span>/ mes</span>
+            </div>
+        </div>
+        <div class="plan-body">
+            <ul class="plan-features">
+                <li><i class="fas fa-check-circle feature-icon" style="color: rgba(250, 113, 255)"></i>Localización de tu vehículo</li>
+                <li><i class="fas fa-check-circle feature-icon" style="color: rgb(250, 113, 255)"></i> Promociona anuncios ilimitados</li>
+                <li><i class="fas fa-check-circle feature-icon" style="color: rgb(250, 113, 255)"></i> Soporte premium 24/7</li>
+                <li><i class="fas fa-check-circle feature-icon" style="color: rgb(250, 113, 255)"></i> Acceso a ofertas exclusivas</li>
+                <li><i class="fas fa-check-circle feature-icon" style="color: rgb(250, 113, 255)"></i> Prioridad en las reservas</li>
+                <li><i class="fas fa-check-circle feature-icon" style="color: rgb(250, 113, 255)"></i> Acceso anticipado a nuevas funciones</li>
+            </ul>
+            <a href="#.php?tipo=premium" class="btn btn-premium btn-plan suscribirse" 
+               style="background: linear-gradient(135deg, #C4EEF2 0%,rgb(250, 113, 255) 100%); margin-top:6vh">Suscribirse</a>
+        </div>
+    </div>
+</div>
+```
+
+**Premium Benefits:**
+
+<Tabs>
+  <Tab title="Visibility">
+    <Check>**Top Search Placement**</Check>
+    
+    Premium listings appear first in search results:
+    
+    ```php mostrar_coches.php
+    $obtener_coche_premium = $_conexion->prepare("
+        SELECT coche.*, sus.tipo AS tipo_suscripcion
+        FROM coche
+        JOIN usuario ON coche.id_usuario = usuario.identificacion
+        JOIN suscripcion_usuario sus 
+            ON sus.identificacion = usuario.identificacion 
+            AND sus.activo = TRUE 
+            AND sus.tipo = 'Premium'
+        ORDER BY coche.precio ASC
+        LIMIT 3
+    ");
+    ```
+    
+    Premium vehicles are displayed with:
+    - Gold border styling
+    - "¡Premium!" badge
+    - Top-3 priority placement
+  </Tab>
+  <Tab title="Listings">
+    <Check>**Unlimited Vehicle Listings**</Check>
+    
+    - No limit on active vehicle listings
+    - Promote all your vehicles simultaneously
+    - Maximum earning potential
+  </Tab>
+  <Tab title="Support">
+    <Check>**24/7 Premium Support**</Check>
+    
+    - Priority customer service
+    - Dedicated support channel
+    - Faster response times
+    - Expert assistance
+  </Tab>
+  <Tab title="Features">
+    <Check>**Exclusive Benefits**</Check>
+    
+    - Access to exclusive offers
+    - Booking priority over standard users
+    - Early access to new platform features
+    - Beta testing opportunities
+  </Tab>
+</Tabs>
+
+## Plan Comparison
+
+<CardGroup cols={3}>
+  <Card title="Free" icon="circle">
+    **€0/month**
+    
+    ✓ Vehicle tracking
+    ✓ Up to 3 listings
+    ✗ No premium support
+    ✗ Standard visibility
+    ✗ No priority
+  </Card>
+  <Card title="Plus" icon="plus">
+    **€6.99/month**
+    
+    ✓ Vehicle tracking
+    ✓ Up to 3 listings
+    ✗ Basic support only
+    ✗ Standard visibility
+    ✗ No priority
+  </Card>
+  <Card title="Premium" icon="crown">
+    **€19.99/month**
+    
+    ✓ Vehicle tracking
+    ✓ Unlimited listings
+    ✓ 24/7 support
+    ✓ Top placement
+    ✓ Booking priority
+  </Card>
+</CardGroup>
+
+## Subscription Page Design
+
+### Hero Section
+
+The subscription page features an immersive video background:
+
+```html planes.php
+<section class="hero-section">
+    <video autoplay muted loop playsinline class="hero-video">
+        <source src="../../video/socialicar_1.mp4" type="video/mp4" />
+        Tu navegador no soporta vídeos HTML5.
+    </video>
+    <div class="video-overlay"></div>
+
+    <div class="container plans-container cards-section" style="margin-top: 5vh;">
+        <div class="row">
+            <div class="col-12">
+                <h1 class="section-title">Planes de Suscripción</h1>
+            </div>
+        </div>
+        <!-- Plan cards -->
+    </div>
+</section>
+```
+
+### Responsive Design
+
+The subscription cards adapt to mobile devices:
+
+```css planes.php
+@media (max-width: 768px) {
+    .plan-body {
+        display: none;
+    }
+
+    .plan-card.open .plan-body {
+        display: block;
+    }
+
+    .dropdown-arrow {
+        display: block !important;
+        transition: transform 0.3s;
+    }
+
+    .plan-card.open .dropdown-arrow {
+        transform: rotate(180deg);
+    }
+
+    .plan-header {
+        cursor: pointer;
+    }
+}
+```
+
+### Mobile Interaction
+
+```javascript planes.php
+function togglePlan(header) {
+    const card = header.closest('.plan-card');
+    // Solo activa el desplegable si el ancho es menor o igual a 700px
+    if (window.innerWidth <= 767) {
+        card.classList.toggle('open');
+    }
+}
+```
+
+<Note>
+  On mobile devices, plan details are collapsible to save space. Users tap the plan header to expand/collapse details.
+</Note>
+
+## Visual Hierarchy
+
+### Premium Badge
+
+```html planes.php
+<div class="recomendado recommended-badge animate__animated animate__pulse animate__infinite">Recomendado</div>
+```
+
+The Premium plan features:
+- Animated "Recomendado" badge
+- Gradient color scheme
+- Pulsing animation to draw attention
+
+### Color Coding
+
+<Tabs>
+  <Tab title="Plus Plan">
+    **Color Scheme:** Cyan (#C4EEF2)
+    
+    ```css
+    background-color: #C4EEF2;
+    color: #333;
+    ```
+  </Tab>
+  <Tab title="Premium Plan">
+    **Color Scheme:** Cyan to Magenta Gradient
+    
+    ```css
+    background: linear-gradient(135deg, #C4EEF2 0%, rgb(250, 113, 255) 100%);
+    ```
+  </Tab>
+</Tabs>
+
+## Payment Integration
+
+Subscription signup redirects to payment processing:
+
+```html planes.php
+<a href="#.php?tipo=basica" class="btn btn-basic btn-plan suscribirse">
+    Suscribirse
+</a>
+
+<a href="#.php?tipo=premium" class="btn btn-premium btn-plan suscribirse">
+    Suscribirse
+</a>
+```
+
+The payment URL includes:
+- Plan type as query parameter
+- Secure payment gateway integration
+- User authentication requirement
+
+## Search Result Priority
+
+### Display Order
+
+Vehicles are displayed in this priority order:
+
+<Steps>
+  <Step title="Premium Vehicles">
+    Display up to 3 premium vehicles first
+    
+    ```php
+    LIMIT 3
+    ```
+  </Step>
+  <Step title="Plus Vehicles">
+    Show up to 6 Plus subscription vehicles
+    
+    ```php
+    LIMIT 6
+    ```
+  </Step>
+  <Step title="Standard Vehicles">
+    Display remaining free/basic vehicles
+    
+    ```php
+    LIMIT 6
+    ```
+  </Step>
+</Steps>
+
+### Visual Differentiation
+
+```php mostrar_coches.php
+echo "
+    <div class='card h-100 shadow-lg border-warning'>
+        <img src='" . $vehiculo_premium['ruta_img_coche'] . "' class='card-img-top'>
+        <div class='card-body'>
+            <h5 class='card-title'>" . $vehiculo_premium['marca'] . " " . $vehiculo_premium['modelo'] . "</h5>
+            <p class='card-text'><strong>" . $vehiculo_premium['marca'] . "</strong></p>
+            <p class='card-text'><strong>" . $vehiculo_premium['codigo_postal'] . " " . $vehiculo_premium['ciudad'] . "</strong></p>
+            <p class='card-text text-success'>" . $vehiculo_premium['precio'] . "€/día</p>
+            <p class='badge bg-warning'>¡Premium!</p>
+        </div>
+    </div>
+";
+```
+
+<Warning>
+  Premium listings have a yellow/gold border (`border-warning` class) and display a "¡Premium!" badge to stand out from standard listings.
+</Warning>
+
+## Database Structure
+
+Subscriptions are tracked in the `suscripcion_usuario` table:
+
+```php
+JOIN suscripcion_usuario sus 
+    ON sus.identificacion = usuario.identificacion 
+    AND sus.activo = TRUE 
+    AND sus.tipo = 'Premium'
+```
+
+**Table fields:**
+- `identificacion` - User ID (foreign key)
+- `tipo` - Subscription type ('Premium', 'Plus', or NULL)
+- `activo` - Boolean indicating active subscription
+- Timestamp fields for subscription period
+
+## Benefits Summary
+
+<AccordionGroup>
+  <Accordion title="Why upgrade to Plus?">
+    The Plus plan is ideal for casual hosts who:
+    - Have 1-3 vehicles to share
+    - Want basic GPS tracking
+    - Don't need priority support
+    - Are budget-conscious
+    
+    **Best for:** Occasional hosts with limited inventory
+  </Accordion>
+  
+  <Accordion title="Why choose Premium?">
+    Premium is recommended for serious hosts who:
+    - Manage multiple vehicles (4+)
+    - Want maximum visibility and bookings
+    - Need reliable 24/7 support
+    - Want to maximize rental income
+    - Treat car sharing as a business
+    
+    **Best for:** Professional hosts and fleet owners
+    
+    **ROI:** Premium visibility can increase bookings by 3-5x, easily covering the subscription cost.
+  </Accordion>
+  
+  <Accordion title="Can I cancel anytime?">
+    Yes, subscriptions can be cancelled at any time. You'll retain premium features until the end of your billing period.
+  </Accordion>
+  
+  <Accordion title="What happens to my extra listings if I downgrade?">
+    If you downgrade from Premium to Plus/Free:
+    - Listings beyond the tier limit become inactive
+    - You can choose which vehicles to keep active
+    - No data is lost - reactivate anytime by upgrading
+  </Accordion>
+</AccordionGroup>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="List Your First Car" icon="car" href="/guides/listing-car">
+    Start earning by adding your vehicle
+  </Card>
+  <Card title="Browse Vehicles" icon="search" href="/guides/renting-car">
+    See how premium listings appear in search
+  </Card>
+</CardGroup>

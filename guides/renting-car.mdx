@@ -1,0 +1,475 @@
+---
+title: Renting a Car
+description: Learn how to search, filter, and book vehicles on SocialiCar's peer-to-peer car sharing platform.
+---
+
+## Overview
+
+The SocialiCar renting system allows users to browse available vehicles, apply advanced filters, and make bookings. The platform prioritizes listings from premium subscribers and ensures vehicle availability through reservation conflict detection.
+
+<Info>
+  Available vehicles are displayed based on subscription tier: Premium listings appear first, followed by Plus, then standard listings.
+</Info>
+
+## Browsing Vehicles
+
+### Search Functionality
+
+The platform provides a comprehensive search system:
+
+```php mostrar_coches.php
+if (isset($_POST["buscar"])) {
+    $buscar = mysqli_real_escape_string($_conexion, $_POST["buscar"]);
+
+    $sql = mysqli_query($_conexion, "SELECT * FROM coche 
+            WHERE 
+                precio LIKE '%$buscar%' OR
+                marca LIKE '%$buscar%' OR 
+                modelo LIKE '%$buscar%' OR 
+                ciudad LIKE '%$buscar%' OR 
+                codigo_postal LIKE '%$buscar%' OR 
+                color LIKE '%$buscar%' OR
+                descripcion LIKE '%$buscar%' OR
+                combustible LIKE '%$buscar%' OR
+                transmision LIKE '%$buscar%' OR
+                provincia LIKE '%$buscar%' OR
+                tipo_aparcamiento LIKE '%$buscar%'");
+
+    $numeroSql = mysqli_num_rows($sql);
+
+    echo "<p class='text-success fw-bold mt-3'>
+            <i class='mdi mdi-car-search'></i> $numeroSql resultados encontrados
+        </p>";
+}
+```
+
+**Searchable fields:**
+- Price
+- Brand and model
+- Location (city, province, postal code)
+- Color
+- Description
+- Fuel type
+- Transmission type
+- Parking type
+
+### Search Form
+
+```html mostrar_coches.php
+<form class="w-75 mx-auto my-4 busqueda" method="POST" action="">
+    <div class="input-group rounded-pill overflow-hidden shadow-sm">
+        <input type="text" name="buscar" id="buscar" class="form-control border-0 py-2 px-3" 
+               placeholder="Buscar vehículo" 
+               value="<?php echo isset($_POST['buscar']) ? $_POST['buscar'] : ''; ?>">
+        <button class="btn_buscar" type="submit">Buscar</button>
+    </div>
+</form>
+```
+
+## Advanced Filters
+
+The platform includes a collapsible filter sidebar with extensive options:
+
+### Filter Categories
+
+<Tabs>
+  <Tab title="Basic Filters">
+    ```html mostrar_coches.php
+    <!-- MARCA -->
+    <div class="mt-3">
+        <label class="form-label">Marca:</label>
+        <select class="form-select">
+            <option selected>- - Selecciona una marca - -</option>
+            <option value="1">Alfa Romeo</option>
+            <option value="2">Volkswagen</option>
+            <option value="3">BMW</option>
+            <option value="4">Mercedes</option>
+            <option value="5">Nissan</option>
+        </select>
+    </div>
+
+    <!-- MODELO -->
+    <div class="mt-3">
+        <label class="form-label">Modelo:</label>
+        <select class="form-select">
+            <option selected>- - Selecciona un modelo - -</option>
+        </select>
+    </div>
+
+    <!-- CIUDAD -->
+    <div class="mt-3">
+        <label class="form-label">Ubicación:</label>
+        <select class="form-select">
+            <option selected>- - Selecciona una ciudad - -</option>
+            <option value="1">Málaga</option>
+            <option value="2">Granada</option>
+            <option value="3">Madrid</option>
+            <option value="4">Valencia</option>
+            <option value="5">Barcelona</option>
+        </select>
+    </div>
+    ```
+  </Tab>
+  <Tab title="Vehicle Type">
+    ```html mostrar_coches.php
+    <div class="mt-3">
+        <label class="form-label">Tipo de Coche:</label>
+        <select class="form-select">
+            <option selected>- - Selecciona un tipo de coche - -</option>
+            <option value="1">Berlina</option>
+            <option value="2">Coupé</option>
+            <option value="3">Monovolumen</option>
+            <option value="4">SUV</option>
+            <option value="5">Familiar</option>
+            <option value="6">Furgoneta</option>
+            <option value="7">Utilitario</option>
+            <option value="8">Autocaravana</option>
+        </select>
+    </div>
+    ```
+  </Tab>
+  <Tab title="Fuel Type">
+    ```html mostrar_coches.php
+    <div class="mt-3">
+        <label class="form-label">Combustible:</label>
+        <select class="form-select">
+            <option selected>- - Selecciona un tipo - -</option>
+            <option value="Diésel">Diésel</option>
+            <option value="Gasolina">Gasolina</option>
+            <option value="Eléctrico">Eléctrico</option>
+            <option value="Híbrido">Híbrido</option>
+        </select>
+    </div>
+    ```
+  </Tab>
+  <Tab title="Price Range">
+    ```html mostrar_coches.php
+    <div class="mt-3">
+        <label class="form-label">Precio Diario (€):</label>
+        <input type="range" class="form-range" min="0" max="500" step="10">
+        <div class="d-flex justify-content-between">
+            <span>€0</span>
+            <span>€500</span>
+        </div>
+    </div>
+    ```
+  </Tab>
+  <Tab title="Availability">
+    ```html mostrar_coches.php
+    <div class="mt-3">
+        <label class="form-label">Disponibilidad</label>
+        <div class="d-flex gap-2">
+            <div class="flex-fill">
+                <label class="form-label">Inicio</label>
+                <input type="date" class="form-control">
+            </div>
+            <div class="flex-fill">
+                <label class="form-label">Fin</label>
+                <input type="date" class="form-control">
+            </div>
+        </div>
+    </div>
+    ```
+  </Tab>
+</Tabs>
+
+### Equipment Filters
+
+The filter system includes a collapsible equipment section:
+
+<AccordionGroup>
+  <Accordion title="Basic Characteristics">
+    ```html mostrar_coches.php
+    <div>
+        <input type="checkbox" id="mascota" name="mascota">
+        <label for="mascota">Permito mascotas</label>
+    </div>
+    <div>
+        <input type="checkbox" id="fumar" name="fumar">
+        <label for="fumar">Permito fumar</label>
+    </div>
+    ```
+  </Accordion>
+  <Accordion title="Driving Assistance">
+    ```html mostrar_coches.php
+    <div>
+        <input type="checkbox" id="gps" name="gps">
+        <label for="gps">GPS</label>
+    </div>
+    <div>
+        <input type="checkbox" id="sensores_aparcamiento" name="sensores_aparcamiento">
+        <label for="sensores_aparcamiento">Sensores de aparcamiento</label>
+    </div>
+    <div>
+        <input type="checkbox" id="camara_trasera" name="camara_trasera">
+        <label for="camara_trasera">Cámara de reversa</label>
+    </div>
+    <div>
+        <input type="checkbox" id="control_de_crucero" name="control_de_crucero">
+        <label for="control_de_crucero">Control de crucero</label>
+    </div>
+    <div>
+        <input type="checkbox" id="cuatro_x_cuatro" name="cuatro_x_cuatro">
+        <label for="cuatro_x_cuatro">Tracción 4x4</label>
+    </div>
+    ```
+  </Accordion>
+  <Accordion title="Cargo Accessories">
+    ```html mostrar_coches.php
+    <div>
+        <input type="checkbox" id="baca" name="baca">
+        <label for="baca">Baca</label>
+    </div>
+    <div>
+        <input type="checkbox" id="portabicicletas" name="portabicicletas">
+        <label for="portabicicletas">Portabicicletas</label>
+    </div>
+    <div>
+        <input type="checkbox" id="portaequipajes" name="portaequipajes">
+        <label for="portaequipajes">Portaequipajes</label>
+    </div>
+    <div>
+        <input type="checkbox" id="portaesquis" name="portaesquis">
+        <label for="portaesquis">Portaesquís</label>
+    </div>
+    <div>
+        <input type="checkbox" id="bola_remolque" name="bola_remolque">
+        <label for="bola_remolque">Bola de remolque</label>
+    </div>
+    ```
+  </Accordion>
+  <Accordion title="Technology Features">
+    ```html mostrar_coches.php
+    <div>
+        <input type="checkbox" id="bluetooth" name="bluetooth">
+        <label for="bluetooth">Bluetooth</label>
+    </div>
+    <div>
+        <input type="checkbox" id="wifi" name="wifi">
+        <label for="wifi">WiFi</label>
+    </div>
+    <div>
+        <input type="checkbox" id="android_carplay" name="android_carplay">
+        <label for="android_carplay">Android CarPlay</label>
+    </div>
+    <div>
+        <input type="checkbox" id="apple_carplay" name="apple_carplay">
+        <label for="apple_carplay">Apple CarPlay</label>
+    </div>
+    ```
+  </Accordion>
+  <Accordion title="Comfort Equipment">
+    ```html mostrar_coches.php
+    <div>
+        <input type="checkbox" id="aire_acondicionado" name="aire_acondicionado">
+        <label for="aire_acondicionado">Aire acondicionado</label>
+    </div>
+    <div>
+        <input type="checkbox" id="asientos_calefactables" name="asientos_calefactables">
+        <label for="asientos_calefactables">Asientos calefactables</label>
+    </div>
+    <div>
+        <input type="checkbox" id="fijacion_isofix" name="fijacion_isofix">
+        <label for="fijacion_isofix">Fijaciones ISOFIX</label>
+    </div>
+    <div>
+        <input type="checkbox" id="movilidad_reducida" name="movilidad_reducida">
+        <label for="movilidad_reducida">Adaptado para personas con movilidad reducida</label>
+    </div>
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Vehicle Display Priority
+
+SocialiCar displays vehicles based on subscription tiers to incentivize premium memberships:
+
+### Premium Listings
+
+```php mostrar_coches.php
+$obtener_coche_premium = $_conexion->prepare("
+    SELECT coche.*, sus.tipo AS tipo_suscripcion
+    FROM coche
+    JOIN usuario ON coche.id_usuario = usuario.identificacion
+    JOIN suscripcion_usuario sus 
+        ON sus.identificacion = usuario.identificacion 
+        AND sus.activo = TRUE 
+        AND sus.tipo = 'Premium'
+    WHERE coche.provincia = ?
+    AND NOT EXISTS (
+        SELECT 1 FROM reserva_coche 
+        WHERE reserva_coche.matricula = coche.matricula 
+        AND (
+            (? BETWEEN reserva_coche.fecha_inicio AND reserva_coche.fecha_final) OR
+            (? BETWEEN reserva_coche.fecha_inicio AND reserva_coche.fecha_final) OR
+            (reserva_coche.fecha_inicio BETWEEN ? AND ?) OR
+            (reserva_coche.fecha_final BETWEEN ? AND ?)
+        )
+    )
+    ORDER BY coche.precio ASC
+    LIMIT 3
+");
+```
+
+<Card title="Premium Badge" icon="crown">
+  Premium listings display with a gold border and a "¡Premium!" badge to highlight their elevated status.
+</Card>
+
+### Plus Listings
+
+```php mostrar_coches.php
+$obtener_coche_plus = $_conexion->prepare("
+    SELECT coche.*, sus.tipo AS tipo_suscripcion
+    FROM coche
+    JOIN usuario ON coche.id_usuario = usuario.identificacion
+    JOIN suscripcion_usuario sus 
+        ON sus.identificacion = usuario.identificacion 
+        AND sus.activo = TRUE 
+        AND sus.tipo = 'Plus'
+    WHERE coche.provincia = ?
+    AND NOT EXISTS (
+        SELECT 1 FROM reserva_coche 
+        WHERE reserva_coche.matricula = coche.matricula 
+        AND (
+            (? BETWEEN reserva_coche.fecha_inicio AND reserva_coche.fecha_final) OR
+            (? BETWEEN reserva_coche.fecha_inicio AND reserva_coche.fecha_final) OR
+            (reserva_coche.fecha_inicio BETWEEN ? AND ?) OR
+            (reserva_coche.fecha_final BETWEEN ? AND ?)
+        )
+    )
+    ORDER BY coche.precio ASC
+    LIMIT 6
+");
+```
+
+### Standard Listings
+
+```php mostrar_coches.php
+$obtener_coche_normal = $_conexion->prepare("
+    SELECT coche.*, sus.tipo AS tipo_suscripcion
+    FROM coche
+    JOIN usuario ON coche.id_usuario = usuario.identificacion
+    LEFT JOIN suscripcion_usuario sus 
+        ON sus.identificacion = usuario.identificacion 
+        AND sus.activo = TRUE
+    WHERE sus.tipo IS NULL
+    AND coche.provincia = ?
+    AND NOT EXISTS (
+        SELECT 1 FROM reserva_coche 
+        WHERE reserva_coche.matricula = coche.matricula 
+        AND (
+            (? BETWEEN reserva_coche.fecha_inicio AND reserva_coche.fecha_final) OR
+            (? BETWEEN reserva_coche.fecha_inicio AND reserva_coche.fecha_final) OR
+            (reserva_coche.fecha_inicio BETWEEN ? AND ?) OR
+            (reserva_coche.fecha_final BETWEEN ? AND ?)
+        )
+    )
+    LIMIT 6
+");
+```
+
+## Availability Checking
+
+The platform automatically filters out vehicles with conflicting reservations:
+
+<Warning>
+  The reservation conflict detection ensures that vehicles already booked during the requested dates are not displayed in search results.
+</Warning>
+
+The SQL query checks for four types of date conflicts:
+1. Start date falls within existing reservation
+2. End date falls within existing reservation
+3. Existing reservation start falls within requested period
+4. Existing reservation end falls within requested period
+
+## Vehicle Card Display
+
+```php mostrar_coches.php
+echo "
+    <div class='col'>
+        <a href='#" . $vehiculo['matricula'] . "' class='text-decoration-none text-dark'>
+            <div class='card h-100 shadow-sm border-primary'>
+                <img src='" . htmlspecialchars($vehiculo['ruta_img_coche']) . "' class='card-img-top' alt='Imagen del coche'>
+                <div class='card-body'>
+                    <h5 class='card-title'>" . htmlspecialchars($vehiculo['marca']) . " " . htmlspecialchars($vehiculo['modelo']) . "</h5>
+                    <p class='card-text'><strong>" . htmlspecialchars($vehiculo['marca']) . "</strong></p>
+                    <p class='card-text'><strong>" . htmlspecialchars($vehiculo['codigo_postal']) . " " . htmlspecialchars($vehiculo['ciudad']) . "</strong></p>
+                    <p class='card-text text-success'>" . htmlspecialchars($vehiculo['precio']) . "€/día</p>
+                </div>
+            </div>
+        </a>
+    </div>
+";
+```
+
+Each vehicle card displays:
+- Vehicle image
+- Brand and model
+- Location (postal code and city)
+- Daily price in euros
+
+## Filter Sidebar JavaScript
+
+```javascript mostrar_coches.php
+// Script para rotar el ícono del botón
+document.getElementById('filtrosOffcanvas').addEventListener('show.bs.offcanvas', function() {
+    document.querySelector('#toggleFiltros i').classList.replace('fa-chevron-left', 'fa-chevron-right');
+});
+
+document.getElementById('filtrosOffcanvas').addEventListener('hide.bs.offcanvas', function() {
+    document.querySelector('#toggleFiltros i').classList.replace('fa-chevron-right', 'fa-chevron-left');
+});
+```
+
+The filter sidebar:
+- Slides in from the right
+- Uses Bootstrap Offcanvas component
+- Has animated chevron icon
+- Includes overlay for better UX
+
+## Hero Section
+
+The search page features a video banner:
+
+```html mostrar_coches.php
+<div class="banner-video-container d-flex justify-content-center align-items-center text-center">
+    <video autoplay muted loop playsinline class="banner-video">
+        <source src="/src/video/socialicar_3.webm" type="video/mp4" />
+    </video>
+    <div class="banner-content text-white">
+        <h1>Encuentra tu <i>vehiculo</i> ideal</h1>
+        <h3>Alquila vehículos de forma segura</h3>
+    </div>
+</div>
+```
+
+## Booking Flow
+
+<Steps>
+  <Step title="Browse Vehicles">
+    Search and filter available vehicles based on your preferences
+  </Step>
+  <Step title="Select Vehicle">
+    Click on a vehicle card to view detailed information
+  </Step>
+  <Step title="Contact Owner">
+    Use the integrated chat system to discuss rental details
+  </Step>
+  <Step title="Make Reservation">
+    Complete booking with selected dates
+  </Step>
+  <Step title="Payment">
+    Process payment through the platform
+  </Step>
+</Steps>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Chat with Owner" icon="message" href="/guides/chat-system">
+    Learn how to communicate with vehicle owners
+  </Card>
+  <Card title="List Your Car" icon="car" href="/guides/listing-car">
+    Become a host and share your vehicle
+  </Card>
+</CardGroup>

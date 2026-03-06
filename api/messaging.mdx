@@ -1,0 +1,318 @@
+---
+title: 'Messaging API'
+description: 'Real-time messaging endpoints for user-to-user communication'
+---
+
+## Overview
+
+The Messaging API enables peer-to-peer communication between users on the SocialiCar platform, typically for coordinating vehicle rentals.
+
+## Send Message
+
+Send a message to another user.
+
+**Endpoint:** `POST /src/pages/chat/send_message.php`
+
+### Authentication
+
+Requires active session.
+
+### Request Parameters
+
+<ParamField path="mensaje" type="string" required>
+  Message content/text to send
+</ParamField>
+
+<ParamField path="id_mensaje_entrante" type="string" required>
+  Recipient's user ID (identificacion)
+</ParamField>
+
+<ParamField path="id_mensaje_saliente" type="string" required>
+  Sender's user ID (identificacion)
+</ParamField>
+
+### Database Query
+
+```sql
+INSERT INTO mensajes (id_mensaje_entrante, id_mensaje_saliente, mensaje) 
+VALUES (?, ?, ?)
+```
+
+### Example Request
+
+```php
+$_POST = [
+    'mensaje' => 'Hola, estoy interesado en alquilar tu coche',
+    'id_mensaje_entrante' => '12345678A',
+    'id_mensaje_saliente' => '87654321B'
+];
+```
+
+### Response
+
+<Expandable title="Success Response">
+  ```
+  Mensaje enviado con éxito
+  ```
+</Expandable>
+
+<Expandable title="Error Response">
+  ```
+  Error al enviar el mensaje: {error details}
+  ```
+</Expandable>
+
+---
+
+## Get Messages
+
+Retrieve all messages in a conversation between two users.
+
+**Endpoint:** `GET /src/pages/chat/get_messages.php`
+
+### Query Parameters
+
+<ParamField query="id_mensaje_entrante" type="string" required>
+  First user's ID (recipient perspective)
+</ParamField>
+
+<ParamField query="id_mensaje_saliente" type="string" required>
+  Second user's ID (sender perspective)
+</ParamField>
+
+### Database Query
+
+Retrieves bidirectional conversation:
+
+```sql
+SELECT * FROM mensajes 
+WHERE (id_mensaje_entrante = ? AND id_mensaje_saliente = ?) 
+   OR (id_mensaje_entrante = ? AND id_mensaje_saliente = ?) 
+ORDER BY fecha_envio ASC
+```
+
+### Get Sender Information
+
+For each message, retrieves sender's name:
+
+```sql
+SELECT nombre FROM usuario WHERE identificacion = ?
+```
+
+### Response Format
+
+Returns HTML-formatted messages:
+
+<Expandable title="Sent Message (Right-aligned)">
+  ```html
+  <div class='mensaje-emisor'>
+      <div class='nombre-emisor'>{nombre}</div>
+      <div class='mensaje-emisor'>{mensaje} <span class='hora-emisor'>{hora}</span></div>
+  </div>
+  ```
+</Expandable>
+
+<Expandable title="Received Message (Left-aligned)">
+  ```html
+  <div class='mensaje-receptor'>
+      <div class='nombre-receptor'>{nombre}</div>
+      <div class='mensaje-receptor'>{mensaje} <span class='hora-receptor'>{hora}</span></div>
+  </div>
+  ```
+</Expandable>
+
+### Message Fields
+
+<ResponseField name="mensaje" type="string">
+  Message text content
+</ResponseField>
+
+<ResponseField name="nombre" type="string">
+  Sender's first name
+</ResponseField>
+
+<ResponseField name="fecha_envio" type="datetime">
+  Message timestamp. Displayed as time only (HH:MM format)
+</ResponseField>
+
+<ResponseField name="id_mensaje_saliente" type="string">
+  Sender's user ID
+</ResponseField>
+
+<ResponseField name="id_mensaje_entrante" type="string">
+  Recipient's user ID
+</ResponseField>
+
+### Example Request
+
+```
+GET /src/pages/chat/get_messages.php?id_mensaje_entrante=12345678A&id_mensaje_saliente=87654321B
+```
+
+### Time Formatting
+
+```php
+$fecha_envio = new DateTime($row['fecha_envio']);
+$hora_formateada = $fecha_envio->format('H:i'); // Format: 14:30
+```
+
+---
+
+## Message Display Logic
+
+Messages are styled differently based on sender:
+
+### Sender Determination
+
+```php
+// If message was sent by the current user
+$clase = ($row['id_mensaje_saliente'] == $id_mensaje_saliente) 
+    ? 'mensaje-emisor'    // Right-aligned, different style
+    : 'mensaje-receptor';  // Left-aligned, different style
+```
+
+### CSS Classes
+
+<ResponseField name="mensaje-emisor" type="class">
+  Applied to messages sent by the current user
+  - Right-aligned
+  - User's name displayed above
+  - Timestamp on the right
+</ResponseField>
+
+<ResponseField name="mensaje-receptor" type="class">
+  Applied to messages received by the current user
+  - Left-aligned
+  - Sender's name displayed above
+  - Timestamp on the right
+</ResponseField>
+
+---
+
+## Access Chat Interface
+
+The main chat interface page.
+
+**Endpoint:** `GET /src/pages/chat/conversa.php`
+
+### Features
+
+- Real-time message display
+- Message input form
+- Contact list
+- User online status indicators
+
+---
+
+## Database Schema
+
+### mensajes Table
+
+```sql
+CREATE TABLE mensajes (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    id_mensaje_entrante VARCHAR(50),  -- Recipient user ID
+    id_mensaje_saliente VARCHAR(50),  -- Sender user ID
+    mensaje TEXT,                      -- Message content
+    fecha_envio DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (id_mensaje_entrante) REFERENCES usuario(identificacion),
+    FOREIGN KEY (id_mensaje_saliente) REFERENCES usuario(identificacion)
+);
+```
+
+---
+
+## Usage Flow
+
+### Typical Message Exchange
+
+1. **User A** views **User B's** vehicle listing
+2. **User A** clicks "Contact Owner" button
+3. **User A** sends initial message:
+   ```
+   POST /src/pages/chat/send_message.php
+   {
+       mensaje: "Hola, ¿está disponible tu Toyota Corolla?",
+       id_mensaje_entrante: "UserB_ID",
+       id_mensaje_saliente: "UserA_ID"
+   }
+   ```
+4. **User B** receives notification and opens chat
+5. Chat loads conversation:
+   ```
+   GET /src/pages/chat/get_messages.php
+       ?id_mensaje_entrante=UserB_ID
+       &id_mensaje_saliente=UserA_ID
+   ```
+6. **User B** responds:
+   ```
+   POST /src/pages/chat/send_message.php
+   {
+       mensaje: "Sí, está disponible. ¿Para qué fechas?",
+       id_mensaje_entrante: "UserA_ID",
+       id_mensaje_saliente: "UserB_ID"
+   }
+   ```
+
+---
+
+## Real-time Updates
+
+The messaging system uses periodic polling:
+
+```javascript
+// Typical implementation (frontend)
+setInterval(() => {
+    fetchMessages();
+}, 3000); // Check for new messages every 3 seconds
+```
+
+---
+
+## Security Considerations
+
+### Authentication Check
+
+```php
+session_start();
+if (!isset($_SESSION['usuario'])) {
+    header("Location: ../../../");
+    exit();
+}
+```
+
+### Message Validation
+
+- Sender must be authenticated user
+- Both sender and recipient IDs must exist in database
+- Foreign key constraints ensure data integrity
+
+### SQL Injection Prevention
+
+```php
+$sql = "INSERT INTO mensajes (id_mensaje_entrante, id_mensaje_saliente, mensaje) 
+        VALUES (?, ?, ?)";
+$stmt = $_conexion->prepare($sql);
+$stmt->bind_param("sss", $id_mensaje_entrante, $id_mensaje_saliente, $mensaje);
+```
+
+---
+
+## Best Practices
+
+### For Senders
+- Keep messages clear and concise
+- Include relevant details (dates, times, questions)
+- Be respectful and professional
+
+### For Recipients
+- Respond promptly to rental inquiries
+- Provide accurate availability information
+- Clarify any rental terms or conditions
+
+### For Implementation
+- Implement XSS protection for message content
+- Add message length limits
+- Consider implementing read receipts
+- Add typing indicators for better UX
+- Implement message pagination for long conversations

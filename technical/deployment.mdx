@@ -1,0 +1,710 @@
+---
+title: 'Deployment Guide'
+description: 'Step-by-step instructions for deploying SocialiCar to production environments'
+---
+
+## Overview
+
+This guide covers deploying SocialiCar to a production environment using Apache, MySQL, and PHP. The platform requires specific configurations for security, file uploads, and external API integrations.
+
+<Warning>
+  Production deployment requires SSL/TLS certificates as PayPal integration mandates HTTPS connections.
+</Warning>
+
+## Prerequisites
+
+<Tabs>
+  <Tab title="Server Requirements">
+    <Check>**PHP**: Version 7.4 or higher</Check>
+    <Check>**MySQL**: Version 5.7+ or MariaDB 10.3+</Check>
+    <Check>**Apache**: Version 2.4+ with mod_rewrite enabled</Check>
+    <Check>**SSL Certificate**: Valid SSL/TLS for HTTPS</Check>
+    <Check>**Disk Space**: Minimum 5GB for application + user uploads</Check>
+    <Check>**Memory**: Minimum 512MB PHP memory_limit</Check>
+  </Tab>
+  
+  <Tab title="PHP Extensions">
+    ```bash
+    # Required PHP extensions
+    php -m | grep -E 'mysqli|mbstring|json|curl|fileinfo|gd'
+    ```
+    
+    Required extensions:
+    - `mysqli` - Database connectivity
+    - `mbstring` - Multi-byte string handling
+    - `json` - JSON processing
+    - `curl` - External API calls
+    - `fileinfo` - File type detection
+    - `gd` or `imagick` - Image processing
+  </Tab>
+  
+  <Tab title="Domain & DNS">
+    - Domain name registered
+    - DNS A record pointing to server IP
+    - SSL certificate (Let's Encrypt recommended)
+  </Tab>
+</Tabs>
+
+## Installation Steps
+
+### 1. Clone the Repository
+
+```bash
+cd /var/www/
+git clone https://github.com/your-org/socialicar.git
+cd socialicar
+```
+
+<Note>
+  Replace `your-org/socialicar` with your actual repository URL.
+</Note>
+
+### 2. Configure File Permissions
+
+Set appropriate permissions for web server access:
+
+```bash
+# Set ownership to web server user
+sudo chown -R www-data:www-data /var/www/socialicar
+
+# Application files (read-only for security)
+sudo find /var/www/socialicar -type f -exec chmod 644 {} \;
+sudo find /var/www/socialicar -type d -exec chmod 755 {} \;
+
+# Upload directory (writable)
+sudo chmod -R 775 /var/www/socialicar/clients
+sudo chown -R www-data:www-data /var/www/socialicar/clients
+```
+
+<Warning>
+  Never set 777 permissions in production. Use 775 for directories and 664 for files that require write access.
+</Warning>
+
+### 3. Database Setup
+
+<Steps>
+  <Step title="Create Database">
+    ```sql
+    CREATE DATABASE socialicar CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+    ```
+  </Step>
+  
+  <Step title="Create Database User">
+    ```sql
+    CREATE USER 'socialicar_user'@'localhost' IDENTIFIED BY 'strong_password_here';
+    GRANT ALL PRIVILEGES ON socialicar.* TO 'socialicar_user'@'localhost';
+    FLUSH PRIVILEGES;
+    ```
+  </Step>
+  
+  <Step title="Import Schema">
+    Since no SQL schema file exists, recreate tables using the [Database Schema](/technical/database-schema) documentation:
+    
+    ```sql
+    USE socialicar;
+    
+    -- Create tables following the schema documentation
+    CREATE TABLE usuario (
+        identificacion VARCHAR(20) PRIMARY KEY,
+        tipo_identificacion ENUM('dni', 'nie', 'nif') NOT NULL,
+        nombre VARCHAR(100) NOT NULL,
+        apellido VARCHAR(100) NOT NULL,
+        correo VARCHAR(255) UNIQUE NOT NULL,
+        contrasena VARCHAR(255) NOT NULL,
+        telefono VARCHAR(15) NOT NULL,
+        fecha_nacimiento DATE NOT NULL,
+        foto_perfil VARCHAR(255),
+        ruta_img_identificacion VARCHAR(255),
+        ruta_img_carnet VARCHAR(255),
+        verificado TINYINT(1) DEFAULT 0,
+        estado TINYINT(1) DEFAULT 1,
+        fecha_registro TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    );
+    
+    -- Continue with other tables...
+    ```
+  </Step>
+  
+  <Step title="Optimize Database">
+    ```sql
+    -- Add performance indexes
+    CREATE INDEX idx_provincia ON coche(provincia);
+    CREATE INDEX idx_precio ON coche(precio);
+    CREATE INDEX idx_reserva_fechas ON reserva_coche(matricula, fecha_inicio, fecha_final);
+    CREATE INDEX idx_mensaje_usuarios ON mensajes(id_mensaje_saliente, id_mensaje_entrante, fecha_envio);
+    ```
+  </Step>
+</Steps>
+
+### 4. Environment Configuration
+
+Create and configure the `.env` file:
+
+```bash
+cp .env.example .env
+nano .env
+```
+
+```ini .env
+# Database Configuration
+BBDD_SERVER=localhost
+BBDD_USER=socialicar_user
+BBDD_PASS=your_strong_password_here
+BBDD_NAME=socialicar
+
+# PayPal Configuration (production credentials)
+PAYPAL_CLIENT_ID=your_production_client_id
+PAYPAL_CLIENT_SECRET=your_production_client_secret
+PAYPAL_MODE=live
+
+# Application Configuration
+APP_ENV=production
+APP_DEBUG=false
+APP_URL=https://your-domain.com
+```
+
+<Warning>
+  **Security Critical**: The `.env` file contains sensitive credentials. Ensure it's:
+  - Not committed to version control (.gitignore)
+  - Not readable by other users (`chmod 600 .env`)
+  - Backed up securely
+</Warning>
+
+### 5. Apache Configuration
+
+<Tabs>
+  <Tab title="Virtual Host">
+    Create Apache virtual host configuration:
+    
+    ```apache /etc/apache2/sites-available/socialicar.conf
+    <VirtualHost *:80>
+        ServerName your-domain.com
+        ServerAlias www.your-domain.com
+        
+        # Redirect all HTTP to HTTPS
+        Redirect permanent / https://your-domain.com/
+    </VirtualHost>
+    
+    <VirtualHost *:443>
+        ServerName your-domain.com
+        ServerAlias www.your-domain.com
+        ServerAdmin admin@your-domain.com
+        
+        DocumentRoot /var/www/socialicar
+        
+        <Directory /var/www/socialicar>
+            Options -Indexes +FollowSymLinks
+            AllowOverride All
+            Require all granted
+        </Directory>
+        
+        # User upload directory
+        <Directory /var/www/socialicar/clients>
+            Options -Indexes
+            AllowOverride None
+            Require all granted
+        </Directory>
+        
+        # Error logs
+        ErrorLog ${APACHE_LOG_DIR}/socialicar_error.log
+        CustomLog ${APACHE_LOG_DIR}/socialicar_access.log combined
+        
+        # SSL Configuration
+        SSLEngine on
+        SSLCertificateFile /etc/letsencrypt/live/your-domain.com/fullchain.pem
+        SSLCertificateKeyFile /etc/letsencrypt/live/your-domain.com/privkey.pem
+        
+        # Security headers
+        Header always set X-Frame-Options "SAMEORIGIN"
+        Header always set X-Content-Type-Options "nosniff"
+        Header always set X-XSS-Protection "1; mode=block"
+        Header always set Referrer-Policy "strict-origin-when-cross-origin"
+    </VirtualHost>
+    ```
+  </Tab>
+  
+  <Tab title="Enable Site">
+    ```bash
+    # Enable required Apache modules
+    sudo a2enmod rewrite
+    sudo a2enmod ssl
+    sudo a2enmod headers
+    
+    # Enable the site
+    sudo a2ensite socialicar.conf
+    
+    # Disable default site
+    sudo a2dissite 000-default.conf
+    
+    # Test configuration
+    sudo apache2ctl configtest
+    
+    # Restart Apache
+    sudo systemctl restart apache2
+    ```
+  </Tab>
+  
+  <Tab title="PHP Configuration">
+    Update PHP settings for file uploads:
+    
+    ```ini /etc/php/7.4/apache2/php.ini
+    ; File upload limits
+    upload_max_filesize = 20M
+    post_max_size = 25M
+    max_file_uploads = 10
+    
+    ; Memory and execution
+    memory_limit = 512M
+    max_execution_time = 300
+    max_input_time = 300
+    
+    ; Error handling (production)
+    display_errors = Off
+    display_startup_errors = Off
+    error_reporting = E_ALL & ~E_DEPRECATED & ~E_STRICT
+    log_errors = On
+    error_log = /var/log/php/error.log
+    
+    ; Session security
+    session.cookie_httponly = 1
+    session.cookie_secure = 1
+    session.use_strict_mode = 1
+    ```
+    
+    Create PHP error log directory:
+    ```bash
+    sudo mkdir -p /var/log/php
+    sudo chown www-data:www-data /var/log/php
+    ```
+  </Tab>
+</Tabs>
+
+### 6. SSL Certificate Installation
+
+<Tabs>
+  <Tab title="Let's Encrypt (Recommended)">
+    Install and configure Let's Encrypt:
+    
+    ```bash
+    # Install Certbot
+    sudo apt-get update
+    sudo apt-get install certbot python3-certbot-apache
+    
+    # Obtain certificate
+    sudo certbot --apache -d your-domain.com -d www.your-domain.com
+    
+    # Test auto-renewal
+    sudo certbot renew --dry-run
+    ```
+    
+    Certbot automatically configures Apache and sets up auto-renewal.
+  </Tab>
+  
+  <Tab title="Commercial Certificate">
+    If using a commercial SSL certificate:
+    
+    ```bash
+    # Copy certificate files
+    sudo cp your-domain.crt /etc/ssl/certs/
+    sudo cp your-domain.key /etc/ssl/private/
+    sudo cp ca-bundle.crt /etc/ssl/certs/
+    
+    # Set permissions
+    sudo chmod 644 /etc/ssl/certs/your-domain.crt
+    sudo chmod 600 /etc/ssl/private/your-domain.key
+    ```
+    
+    Update virtual host SSL paths accordingly.
+  </Tab>
+</Tabs>
+
+## External Service Configuration
+
+### PayPal Integration
+
+<Steps>
+  <Step title="Create PayPal App">
+    1. Log in to [PayPal Developer Dashboard](https://developer.paypal.com/)
+    2. Navigate to "My Apps & Credentials"
+    3. Switch to **Live** environment
+    4. Create a new app
+    5. Copy **Client ID** and **Secret**
+  </Step>
+  
+  <Step title="Update Code">
+    Edit payment integration file:
+    
+    ```php src/pages/pago/paypal.php
+    // Replace sandbox credentials with live credentials
+    <script src="https://www.paypal.com/sdk/js?client-id=YOUR_LIVE_CLIENT_ID&currency=EUR"></script>
+    ```
+  </Step>
+  
+  <Step title="Configure Webhooks">
+    Set up PayPal webhooks for payment notifications:
+    - Webhook URL: `https://your-domain.com/src/pages/pago/webhook.php`
+    - Events: `PAYMENT.CAPTURE.COMPLETED`, `PAYMENT.CAPTURE.DENIED`
+  </Step>
+</Steps>
+
+### Email Configuration (PHPMailer)
+
+Configure SMTP settings in `src/components/correo/enviar_correo.php`:
+
+```php
+$mail->isSMTP();
+$mail->Host = 'smtp.gmail.com';  // or your SMTP server
+$mail->SMTPAuth = true;
+$mail->Username = 'your-email@gmail.com';
+$mail->Password = 'your-app-password';
+$mail->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS;
+$mail->Port = 587;
+```
+
+<Note>
+  For Gmail, you must create an [App Password](https://support.google.com/accounts/answer/185833) for SMTP authentication.
+</Note>
+
+## Security Hardening
+
+### .htaccess Security Rules
+
+The existing `.htaccess` file includes security rules:
+
+```apache .htaccess
+# Block directory indexing
+Options -Indexes
+
+# Block access to sensitive files
+<FilesMatch "^(\.env|.*\.json)$">
+  Order allow,deny
+  Deny from all
+</FilesMatch>
+
+# Block access to internal directories
+RewriteEngine On
+RewriteCond %{REQUEST_URI} ^/src/(config|fonts|img|js|styles|video)/$
+RewriteRule ^ - [F,L]
+
+# Custom error pages
+ErrorDocument 403 /src/pages/error/403.php
+ErrorDocument 404 /src/pages/error/404.php
+```
+
+### Additional Security Measures
+
+<AccordionGroup>
+  <Accordion title="Database Security">
+    ```sql
+    -- Use least privilege principle
+    REVOKE ALL PRIVILEGES ON socialicar.* FROM 'socialicar_user'@'localhost';
+    GRANT SELECT, INSERT, UPDATE, DELETE ON socialicar.* TO 'socialicar_user'@'localhost';
+    FLUSH PRIVILEGES;
+    
+    -- Disable remote root access
+    DELETE FROM mysql.user WHERE User='root' AND Host NOT IN ('localhost', '127.0.0.1', '::1');
+    FLUSH PRIVILEGES;
+    ```
+  </Accordion>
+  
+  <Accordion title="File Upload Security">
+    ```php
+    // Validate file types
+    $allowed_types = ['image/jpeg', 'image/png', 'image/jpg'];
+    if (!in_array($file['type'], $allowed_types)) {
+        die('Invalid file type');
+    }
+    
+    // Validate file size (max 5MB)
+    if ($file['size'] > 5 * 1024 * 1024) {
+        die('File too large');
+    }
+    
+    // Sanitize filename
+    $filename = preg_replace('/[^a-zA-Z0-9_\-\.]/', '', $file['name']);
+    ```
+  </Accordion>
+  
+  <Accordion title="Session Security">
+    ```php
+    // Enable secure session handling
+    ini_set('session.cookie_httponly', 1);
+    ini_set('session.cookie_secure', 1);
+    ini_set('session.use_strict_mode', 1);
+    session_start();
+    
+    // Regenerate session ID on login
+    session_regenerate_id(true);
+    ```
+  </Accordion>
+  
+  <Accordion title="CSRF Protection">
+    Add CSRF token generation and validation:
+    
+    ```php
+    // Generate token
+    if (empty($_SESSION['csrf_token'])) {
+        $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
+    }
+    
+    // Validate token
+    if ($_POST['csrf_token'] !== $_SESSION['csrf_token']) {
+        die('CSRF token validation failed');
+    }
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Performance Optimization
+
+### Enable OpCache
+
+```ini /etc/php/7.4/apache2/conf.d/10-opcache.ini
+opcache.enable=1
+opcache.memory_consumption=256
+opcache.interned_strings_buffer=16
+opcache.max_accelerated_files=10000
+opcache.validate_timestamps=0
+```
+
+### Apache Performance
+
+```apache /etc/apache2/mods-available/mpm_prefork.conf
+<IfModule mpm_prefork_module>
+    StartServers             5
+    MinSpareServers          5
+    MaxSpareServers          10
+    MaxRequestWorkers        150
+    MaxConnectionsPerChild   3000
+</IfModule>
+```
+
+### Enable Compression
+
+```apache
+<IfModule mod_deflate.c>
+    AddOutputFilterByType DEFLATE text/html text/plain text/xml text/css
+    AddOutputFilterByType DEFLATE text/javascript application/javascript application/json
+</IfModule>
+```
+
+## Monitoring & Logging
+
+### Application Logs
+
+```bash
+# Create log directory
+mkdir -p /var/www/socialicar/logs
+chown www-data:www-data /var/www/socialicar/logs
+```
+
+### Log Rotation
+
+```bash /etc/logrotate.d/socialicar
+/var/www/socialicar/logs/*.log {
+    daily
+    missingok
+    rotate 14
+    compress
+    delaycompress
+    notifempty
+    create 0640 www-data www-data
+    sharedscripts
+    postrotate
+        /usr/sbin/apachectl graceful > /dev/null
+    endscript
+}
+```
+
+### Monitoring Tools
+
+<CardGroup cols={2}>
+  <Card title="Error Monitoring" icon="bug">
+    - PHP error logs: `/var/log/php/error.log`
+    - Apache error logs: `/var/log/apache2/socialicar_error.log`
+    - MySQL logs: `/var/log/mysql/error.log`
+  </Card>
+  
+  <Card title="Performance" icon="gauge">
+    - Apache access logs for traffic analysis
+    - MySQL slow query log
+    - Server resource monitoring (CPU, RAM, disk)
+  </Card>
+</CardGroup>
+
+## Backup Strategy
+
+<Tabs>
+  <Tab title="Database Backup">
+    ```bash
+    #!/bin/bash
+    # Daily database backup script
+    
+    BACKUP_DIR="/backups/database"
+    DATE=$(date +%Y%m%d_%H%M%S)
+    DB_NAME="socialicar"
+    
+    mkdir -p $BACKUP_DIR
+    
+    mysqldump -u socialicar_user -p'your_password' $DB_NAME | \
+        gzip > $BACKUP_DIR/${DB_NAME}_${DATE}.sql.gz
+    
+    # Keep only last 30 days
+    find $BACKUP_DIR -name "*.sql.gz" -mtime +30 -delete
+    ```
+    
+    Add to crontab:
+    ```bash
+    0 2 * * * /path/to/backup-database.sh
+    ```
+  </Tab>
+  
+  <Tab title="File Backup">
+    ```bash
+    #!/bin/bash
+    # Weekly file backup script
+    
+    BACKUP_DIR="/backups/files"
+    DATE=$(date +%Y%m%d)
+    SOURCE="/var/www/socialicar"
+    
+    mkdir -p $BACKUP_DIR
+    
+    tar -czf $BACKUP_DIR/socialicar_${DATE}.tar.gz \
+        --exclude='clients/img' \
+        $SOURCE
+    
+    # Backup user uploads separately
+    tar -czf $BACKUP_DIR/uploads_${DATE}.tar.gz \
+        $SOURCE/clients/img
+    
+    # Keep only last 4 weeks
+    find $BACKUP_DIR -name "*.tar.gz" -mtime +28 -delete
+    ```
+    
+    Add to crontab:
+    ```bash
+    0 3 * * 0 /path/to/backup-files.sh
+    ```
+  </Tab>
+</Tabs>
+
+## Post-Deployment Checklist
+
+<Steps>
+  <Step title="Verify Installation">
+    <Check>Database connection successful</Check>
+    <Check>All pages load without errors</Check>
+    <Check>User registration works</Check>
+    <Check>Login/logout functional</Check>
+    <Check>File uploads working</Check>
+    <Check>PayPal integration active</Check>
+  </Step>
+  
+  <Step title="Security Tests">
+    <Check>.env file not accessible via web</Check>
+    <Check>Directory indexing disabled</Check>
+    <Check>HTTPS enforced on all pages</Check>
+    <Check>SQL injection tests passed</Check>
+    <Check>XSS protection verified</Check>
+  </Step>
+  
+  <Step title="Performance Tests">
+    <Check>Page load times acceptable</Check>
+    <Check>Database queries optimized</Check>
+    <Check>Image uploads processing correctly</Check>
+    <Check>OpCache enabled and working</Check>
+  </Step>
+  
+  <Step title="Monitoring Setup">
+    <Check>Error logging configured</Check>
+    <Check>Log rotation active</Check>
+    <Check>Backup scripts scheduled</Check>
+    <Check>SSL certificate expiry monitoring</Check>
+  </Step>
+</Steps>
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="Database Connection Failed">
+    ```bash
+    # Check MySQL is running
+    sudo systemctl status mysql
+    
+    # Test connection
+    mysql -u socialicar_user -p -h localhost socialicar
+    
+    # Check user permissions
+    mysql -u root -p -e "SHOW GRANTS FOR 'socialicar_user'@'localhost';"
+    ```
+  </Accordion>
+  
+  <Accordion title="File Upload Errors">
+    ```bash
+    # Check directory permissions
+    ls -la /var/www/socialicar/clients
+    
+    # Check PHP upload settings
+    php -i | grep upload
+    
+    # Check disk space
+    df -h
+    ```
+  </Accordion>
+  
+  <Accordion title="Apache Errors">
+    ```bash
+    # Check Apache error log
+    sudo tail -f /var/log/apache2/socialicar_error.log
+    
+    # Test configuration
+    sudo apache2ctl configtest
+    
+    # Check module status
+    apache2ctl -M | grep rewrite
+    ```
+  </Accordion>
+  
+  <Accordion title="PayPal Integration Issues">
+    - Verify SSL certificate is valid
+    - Check Client ID matches live credentials
+    - Confirm webhook URLs are accessible
+    - Review PayPal dashboard for transaction logs
+  </Accordion>
+</AccordionGroup>
+
+## Scaling Considerations
+
+<Tabs>
+  <Tab title="Vertical Scaling">
+    - Increase PHP memory limit
+    - Add more Apache worker threads
+    - Optimize MySQL buffer pool size
+    - Use faster storage (SSD/NVMe)
+  </Tab>
+  
+  <Tab title="Horizontal Scaling">
+    - Implement load balancer (HAProxy/Nginx)
+    - Separate database server
+    - Use Redis for session storage
+    - CDN for static assets
+    - Object storage for user uploads (S3/MinIO)
+  </Tab>
+</Tabs>
+
+## Next Steps
+
+<CardGroup cols={3}>
+  <Card title="Architecture" icon="diagram-project" href="/technical/architecture">
+    Understand system architecture
+  </Card>
+  
+  <Card title="Database" icon="database" href="/technical/database-schema">
+    Review database schema
+  </Card>
+  
+  <Card title="Security" icon="shield" href="/technical/security">
+    Learn security best practices
+  </Card>
+</CardGroup>

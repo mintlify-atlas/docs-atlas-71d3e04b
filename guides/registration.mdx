@@ -1,0 +1,372 @@
+---
+title: User Registration
+description: Complete guide to the user registration process in SocialiCar, including validation rules, form fields, and security measures.
+---
+
+## Overview
+
+The SocialiCar registration system allows new users to create accounts with comprehensive identity verification. The system validates all user inputs, ensures data integrity, and implements security best practices.
+
+<Info>
+  Users must be at least 18 years old to register on the platform.
+</Info>
+
+## Registration Requirements
+
+### Required Fields
+
+All users must provide the following information during registration:
+
+<CardGroup cols={2}>
+  <Card title="Personal Information" icon="user">
+    - First name (nombre)
+    - Last name (apellido)
+    - Birth date (fecha_nacimiento)
+    - Phone number (telefono)
+  </Card>
+  <Card title="Account Credentials" icon="lock">
+    - Email address (correo)
+    - Password (contrasena)
+    - Password confirmation
+  </Card>
+  <Card title="Identification" icon="id-card">
+    - ID type (DNI, NIE, or NIF)
+    - ID number (identificacion)
+  </Card>
+  <Card title="Optional" icon="image">
+    - Profile photo
+    - ID photo
+    - Driver's license photo
+  </Card>
+</CardGroup>
+
+## Validation Rules
+
+### Name Validation
+
+Names must contain only letters, spaces, and accented characters:
+
+```php registro.php
+if ($nombre == '') {
+    $confirmar = false;
+    $err_nombre = "El nombre es obligatorio";
+} else {
+    $patron = "/^[a-zA-Z0-9 áéióúÁÉÍÓÚñÑüÜ'-]+$/";
+    if (!preg_match($patron, $nombre)) {
+        $confirmar = false;
+        $err_nombre = "El nombre solo puede tener letras";
+    }
+}
+```
+
+### Email Validation
+
+The system checks for:
+- Valid email format
+- Unique email addresses (no duplicates)
+
+```php registro.php
+$sql = $_conexion->prepare("SELECT * FROM usuario WHERE correo = ?");
+$sql->bind_param("s", $correo);
+$sql->execute();
+$resultado = $sql->get_result();
+
+if ($correo == '') {
+    $confirmar = false;
+    $err_correo = "El correo es obligatorio";
+} else {
+    if ($resultado->num_rows == 1) {
+        $confirmar = false;
+        $err_correo = "El correo ya existe";
+    } else {
+        if (filter_var($correo, FILTER_VALIDATE_EMAIL) == false) {
+            $confirmar = false;
+            $err_correo = "El correo tiene que tener el @ y el . bien colocados";
+        }
+    }
+}
+```
+
+### Password Requirements
+
+<Warning>
+  Passwords must meet strict security requirements to protect user accounts.
+</Warning>
+
+Password validation criteria:
+
+```php registro.php
+if ($contrasena == '') {
+    $confirmar = false;
+    $err_contrasena = "La contraseña es obligatoria";
+} else {
+    if (strlen($contrasena) < 7 || strlen($contrasena) > 20) {
+        $confirmar = false;
+        $err_contrasena = "La contraseña tiene que tener como minimo 7 y como maximo 20 caracteres";
+    } else {
+        $patron = "/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).+$/";
+        if (!preg_match($patron, $contrasena)) {
+            $confirmar = false;
+            $err_contrasena = "La contraseña tiene que tener al menos 1 mayuscula, 1 minuscula y 1 numero";
+        } else {
+            $contrasena_cifrada = password_hash($contrasena, PASSWORD_DEFAULT);
+        }
+    }
+}
+```
+
+**Requirements:**
+- Minimum 7 characters, maximum 20 characters
+- At least 1 uppercase letter
+- At least 1 lowercase letter
+- At least 1 number
+- Passwords are hashed using PHP's `password_hash()` function
+
+### Phone Number Validation
+
+```php registro.php
+if ($telefono == '') {
+    $confirmar = false;
+    $err_telefono = "El telefono es obligatorio";
+} else {
+    $patron = "/^\d{9,15}$/";
+    if (!preg_match($patron, $telefono)) {
+        $confirmar = false;
+        $err_telefono = "El teléfono debe contener solo dígitos y tener entre 9 y 15 números";
+    }
+}
+```
+
+- Must contain 9-15 digits
+- Only numeric characters allowed
+
+### Identification Validation
+
+SocialiCar supports three types of Spanish identification documents:
+
+<Tabs>
+  <Tab title="DNI">
+    **DNI (Documento Nacional de Identidad)**
+    
+    Format: 8 digits followed by 1 letter
+    
+    ```php registro.php
+    if ($tipo_identificacion == "dni") {
+        $patron = "/^[0-9]{8}[A-Za-z]$/";
+        if (!preg_match($patron, $identificacion)) {
+            $confirmar = false;
+            $err_identificacion = "La DNI debe tener 8 digitos y una letra al final";
+        }
+    }
+    ```
+  </Tab>
+  <Tab title="NIE">
+    **NIE (Número de Identidad de Extranjero)**
+    
+    Format: X, Y, or Z followed by 7 digits and 1 letter
+    
+    ```php registro.php
+    elseif ($tipo_identificacion == "nie") {
+        $patron = "/^[XYZ][0-9]{7}[A-Za-z]$/";
+        if (!preg_match($patron, $identificacion)) {
+            $confirmar = false;
+            $err_identificacion = "El NIE debe tener una X,Y o Z, siguiendo de 7 digitos y una letra al final";
+        }
+    }
+    ```
+  </Tab>
+  <Tab title="NIF">
+    **NIF (Número de Identificación Fiscal)**
+    
+    Format: 8 digits followed by 1 letter
+    
+    ```php registro.php
+    elseif ($tipo_identificacion == "nif") {
+        $patron = "/^[0-9]{8}[A-Za-z]$/";
+        if (!preg_match($patron, $identificacion)) {
+            $confirmar = false;
+            $err_identificacion = "El NIF debe tener 8 digitos y una letra al final";
+        }
+    }
+    ```
+  </Tab>
+</Tabs>
+
+### Age Verification
+
+```php registro.php
+if ($fecha_nacimiento == '') {
+    $confirmar = false;
+    $err_fecha_nacimiento = "La fecha de nacimiento es obligatoria";
+} else {
+    $fecha_actual = date("Y-m-d");
+    if ($fecha_nacimiento > $fecha_actual) {
+        $confirmar = false;
+        $err_fecha_nacimiento = "La fecha de nacimiento no puede ser mayor a la fecha actual";
+    } else {
+        if (date("Y") - date("Y", strtotime($fecha_nacimiento)) < 18) {
+            $confirmar = false;
+            $err_fecha_nacimiento = "Tienes que ser mayor de edad para registrarte";
+        }
+    }
+}
+```
+
+## Registration Process
+
+<Steps>
+  <Step title="Fill Registration Form">
+    Users complete all required fields on the registration page at `/src/pages/usuario/registro.php`
+  </Step>
+  <Step title="Server-Side Validation">
+    All inputs are validated on the server using the `depurar()` function to sanitize data and prevent XSS attacks
+  </Step>
+  <Step title="Database Check">
+    System verifies that email and identification number are unique
+  </Step>
+  <Step title="Account Creation">
+    If all validations pass, a new user record is inserted into the database
+    
+    ```php registro.php
+    if ($confirmar) {
+        $sql = $_conexion->prepare("INSERT INTO usuario (
+                identificacion, tipo_identificacion, nombre, apellido, correo, 
+                contrasena, telefono, foto_perfil, ruta_img_identificacion, 
+                ruta_img_carnet, verificado, fecha_nacimiento, estado
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?, 1)");
+
+        $sql->bind_param(
+            "sssssssssss",
+            $identificacion,
+            $tipo_identificacion,
+            $nombre,
+            $apellido,
+            $correo,
+            $contrasena_cifrada,
+            $telefono,
+            $foto_perfil,
+            $ruta_img_identificacion,
+            $ruta_img_carnet,
+            $fecha_nacimiento
+        );
+
+        if ($sql->execute()) {
+            // Account created successfully
+        }
+    }
+    ```
+  </Step>
+  <Step title="Automatic Login">
+    User is automatically logged in after successful registration and redirected to the home page
+    
+    ```php registro.php
+    if ($resultado->num_rows === 1) {
+        $datos_usuario = $resultado->fetch_assoc();
+        $_SESSION["usuario"] = $datos_usuario;
+        header("Location: ../../../");
+        exit();
+    }
+    ```
+  </Step>
+</Steps>
+
+## Security Features
+
+### Input Sanitization
+
+All user inputs are sanitized using the `depurar()` function:
+
+```php depurar.php
+function depurar(string $entrada) : string {
+    $salida = htmlspecialchars($entrada);
+    $salida = trim($salida);
+    $salida = stripslashes($salida);
+    $salida = preg_replace('!\s!', ' ', $salida);
+    return $salida;
+}
+```
+
+This function:
+- Converts special characters to HTML entities (prevents XSS)
+- Removes leading/trailing whitespace
+- Removes backslashes
+- Normalizes whitespace characters
+
+### Password Security
+
+<Check>
+  Passwords are hashed using PHP's `password_hash()` with the `PASSWORD_DEFAULT` algorithm (currently bcrypt).
+</Check>
+
+The system never stores plaintext passwords in the database.
+
+## Form Structure
+
+The registration form uses Bootstrap floating labels for a modern UI:
+
+```html registro.php
+<form action="" method="post">
+    <div class="row gy-3">
+        <div class="mb-2 col-12">
+            <div class="form-floating">
+                <input class="form-control" type="text" placeholder="Nombre*" 
+                       id="nombre" name="nombre" 
+                       value="<?php if (isset($nombre)) echo $nombre; ?>">
+                <label for="nombre">Nombre</label>
+                <?php if (isset($err_nombre)) echo "<span class='error'>$err_nombre</span>"; ?>
+            </div>
+        </div>
+
+        <div class="mb-2 col-12">
+            <div class="form-floating">
+                <select class="form-select" id="tipoIdentificacion" name="tipo_identificacion">
+                    <option disabled hidden value="">Tipo de identificación*</option>
+                    <option value="dni">DNI</option>
+                    <option value="nie">NIE</option>
+                    <option value="nif">NIF</option>
+                </select>
+                <label for="tipoIdentificacion">Tipo de identificación</label>
+            </div>
+        </div>
+
+        <div class="col-12 mt-3">
+            <input type="submit" class="btn btn-primary w-100" value="Registrarse">
+        </div>
+    </div>
+</form>
+```
+
+## Common Issues
+
+<AccordionGroup>
+  <Accordion title="Email already exists error">
+    This error occurs when attempting to register with an email that's already in the database. Users should try logging in instead or use a different email address.
+  </Accordion>
+  
+  <Accordion title="Password doesn't meet requirements">
+    Ensure the password contains at least 7 characters with at least one uppercase letter, one lowercase letter, and one number.
+  </Accordion>
+  
+  <Accordion title="Invalid ID format">
+    Make sure the ID type matches the ID number format:
+    - DNI/NIF: 8 digits + 1 letter
+    - NIE: X/Y/Z + 7 digits + 1 letter
+  </Accordion>
+  
+  <Accordion title="Age verification fails">
+    Users must be 18 years or older to register. The system calculates age based on the birth date provided.
+  </Accordion>
+</AccordionGroup>
+
+## Next Steps
+
+After successful registration:
+
+<CardGroup cols={2}>
+  <Card title="List Your Car" icon="car" href="/guides/listing-car">
+    Learn how to add your vehicle to the platform
+  </Card>
+  <Card title="Rent a Car" icon="key" href="/guides/renting-car">
+    Start browsing available vehicles
+  </Card>
+</CardGroup>

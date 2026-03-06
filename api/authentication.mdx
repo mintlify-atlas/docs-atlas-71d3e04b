@@ -1,0 +1,225 @@
+---
+title: 'Authentication API'
+description: 'User authentication endpoints for login, registration, and session management'
+---
+
+## Overview
+
+The SocialiCar authentication system uses PHP sessions for managing user authentication. All authentication endpoints use POST requests with form data.
+
+## Register User
+
+Create a new user account in the SocialiCar platform.
+
+**Endpoint:** `POST /src/pages/usuario/registro.php`
+
+### Request Parameters
+
+<ParamField path="nombre" type="string" required>
+  User's first name. Must contain only letters, spaces, and accents.
+</ParamField>
+
+<ParamField path="apellido" type="string" required>
+  User's last name. Must contain only letters, spaces, and accents.
+</ParamField>
+
+<ParamField path="correo" type="string" required>
+  User's email address. Must be unique and valid format.
+</ParamField>
+
+<ParamField path="contrasena" type="string" required>
+  User password. Must be 7-20 characters with at least one uppercase, one lowercase, and one number.
+</ParamField>
+
+<ParamField path="confirma_contrasena" type="string" required>
+  Password confirmation. Must match the password field.
+</ParamField>
+
+<ParamField path="telefono" type="string" required>
+  Phone number. Must contain 9-15 digits.
+</ParamField>
+
+<ParamField path="tipo_identificacion" type="string" required>
+  Type of identification document. Valid values: `dni`, `nie`, `nif`
+</ParamField>
+
+<ParamField path="identificacion" type="string" required>
+  Identification number. Format depends on `tipo_identificacion`:
+  - DNI/NIF: 8 digits + 1 letter (e.g., `12345678A`)
+  - NIE: X/Y/Z + 7 digits + 1 letter (e.g., `X1234567B`)
+</ParamField>
+
+<ParamField path="fecha_nacimiento" type="date" required>
+  Date of birth. User must be 18 years or older.
+</ParamField>
+
+### Database Query
+
+```sql
+INSERT INTO usuario (
+    identificacion, tipo_identificacion, nombre, apellido, correo, 
+    contrasena, telefono, foto_perfil, ruta_img_identificacion, 
+    ruta_img_carnet, verificado, fecha_nacimiento, estado
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?, 1)
+```
+
+### Example Request
+
+```php
+$_POST = [
+    'nombre' => 'Juan',
+    'apellido' => 'García López',
+    'correo' => 'juan.garcia@example.com',
+    'contrasena' => 'Password123',
+    'confirma_contrasena' => 'Password123',
+    'telefono' => '612345678',
+    'tipo_identificacion' => 'dni',
+    'identificacion' => '12345678A',
+    'fecha_nacimiento' => '1990-05-15'
+];
+```
+
+### Response
+
+On success, creates user session and redirects to home page.
+
+### Validation Errors
+
+<ResponseField name="err_nombre" type="string">
+  Name validation error message
+</ResponseField>
+
+<ResponseField name="err_correo" type="string">
+  Email validation error (invalid format or already exists)
+</ResponseField>
+
+<ResponseField name="err_contrasena" type="string">
+  Password validation error (length or complexity requirements)
+</ResponseField>
+
+<ResponseField name="err_identificacion" type="string">
+  Identification validation error (format or already registered)
+</ResponseField>
+
+---
+
+## Login
+
+Authenticate a user and create a session.
+
+**Endpoint:** `POST /src/pages/usuario/iniciar_sesion.php`
+
+### Request Parameters
+
+<ParamField path="correo" type="string" required>
+  User's registered email address
+</ParamField>
+
+<ParamField path="contrasena" type="string" required>
+  User's password
+</ParamField>
+
+### Database Query
+
+```sql
+SELECT * FROM usuario WHERE correo = ?
+```
+
+Password verification uses `password_verify()` function.
+
+### Example Request
+
+```php
+$_POST = [
+    'correo' => 'juan.garcia@example.com',
+    'contrasena' => 'Password123'
+];
+```
+
+### Success Flow
+
+```php
+// On successful authentication
+$_SESSION["usuario"] = $datos_usuario;
+
+// Update user status to online
+UPDATE usuario SET estado = 1 WHERE identificacion = ?
+```
+
+### Response
+
+<Expandable title="Success Response">
+  - Creates PHP session with user data
+  - Sets user `estado` to 1 (online)
+  - Redirects to `/index.php`
+</Expandable>
+
+<Expandable title="Error Responses">
+  - **Email not found:** `$err_correo = "El correo electrónico no existe"`
+  - **Invalid password:** `$err_contrasena = "La contraseña es incorrecta"`
+</Expandable>
+
+---
+
+## Logout
+
+End the user session and set status to offline.
+
+**Endpoint:** `GET /src/pages/usuario/cerrar_sesion.php`
+
+### Process Flow
+
+```php
+// Update user status to offline
+UPDATE usuario SET estado = 0 WHERE identificacion = ?
+
+// Destroy session
+session_destroy();
+```
+
+### Response
+
+Redirects to login page (`iniciar_sesion.php`)
+
+---
+
+## Session Management
+
+All authenticated pages check for active session:
+
+```php
+session_start();
+if (!isset($_SESSION['usuario'])) {
+    header("Location: ../../../");
+    exit();
+}
+```
+
+### Session Data Structure
+
+<ResponseField name="$_SESSION['usuario']" type="array">
+  Contains all user data from the database:
+  
+  <Expandable title="User Session Fields">
+    - `identificacion` - User ID
+    - `nombre` - First name
+    - `apellido` - Last name
+    - `correo` - Email
+    - `telefono` - Phone number
+    - `tipo_identificacion` - ID document type
+    - `foto_perfil` - Profile picture path
+    - `estado` - Online/offline status (1/0)
+    - `verificado` - Account verification status
+  </Expandable>
+</ResponseField>
+
+---
+
+## Security Features
+
+- Password hashing using `password_hash()` with `PASSWORD_DEFAULT`
+- Password verification using `password_verify()`
+- SQL injection protection via prepared statements
+- Input sanitization with custom `depurar()` function
+- Session-based authentication
+- Online/offline status tracking

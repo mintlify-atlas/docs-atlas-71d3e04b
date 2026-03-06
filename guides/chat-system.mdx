@@ -1,0 +1,483 @@
+---
+title: Chat System
+description: Real-time messaging system for communication between car owners and renters in SocialiCar.
+---
+
+## Overview
+
+The SocialiCar chat system provides real-time communication between users. The platform supports multiple conversations, automatic message updates, and a clean interface for discussing rental details.
+
+<Info>
+  The chat system prevents users from sending messages to themselves and displays online/offline status for better communication.
+</Info>
+
+## Chat Architecture
+
+### Main Components
+
+<CardGroup cols={2}>
+  <Card title="Conversation List" icon="list">
+    Displays all active chats with the last message and timestamp
+  </Card>
+  <Card title="Chat Area" icon="comments">
+    Shows the full message history with the selected user
+  </Card>
+  <Card title="Message Input" icon="keyboard">
+    Text area for composing and sending messages
+  </Card>
+  <Card title="User Status" icon="circle-dot">
+    Shows online/offline status of conversation participants
+  </Card>
+</CardGroup>
+
+## Chat Interface
+
+### Layout Structure
+
+```html conversa.php
+<div class="chat-wrapper">
+    <div class="container izquierda">
+        <h3><i class="fas fa-comments mr-2"></i> Mis chats</h3>
+        <div class="lista-chats">
+            <!-- Chat list items -->
+        </div>
+    </div>
+
+    <div class="container derecha">
+        <section class="chat-area">
+            <header>
+                <!-- User information and status -->
+            </header>
+            <div class="chat-box" id="chat-container">
+                <!-- Messages display -->
+            </div>
+            <form class="typing-area" id="messageForm">
+                <!-- Message input -->
+            </form>
+        </section>
+    </div>
+</div>
+```
+
+### Responsive Design
+
+```css conversa.php
+.chat-wrapper {
+    display: flex;
+    max-width: 1200px;
+    margin: 2rem auto;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+    background: white;
+    height: calc(100vh - 200px);
+}
+
+.container.izquierda {
+    flex: 1;
+    border-right: 1px solid #e9ecef;
+    background:rgba(121, 179, 191, 0.17) !important;
+    overflow-y: auto;
+    padding: 0;
+}
+
+.container.derecha {
+    flex: 2;
+    display: flex;
+    flex-direction: column;
+    background:rgb(240, 253, 255);
+}
+
+@media (max-width: 768px) {
+    .chat-wrapper {
+        flex-direction: column;
+        height: auto;
+    }
+
+    .container.izquierda,
+    .container.derecha {
+        flex: none;
+        width: 100%;
+    }
+}
+```
+
+## Conversation List
+
+### Loading Active Chats
+
+```php conversa.php
+$sql = $_conexion->prepare("
+    SELECT 
+        IF(m.id_mensaje_saliente = ?, m.id_mensaje_entrante, m.id_mensaje_saliente) AS otro_usuario,
+        MAX(m.fecha_envio) AS ultima_fecha,
+        (SELECT mensaje FROM mensajes 
+        WHERE (id_mensaje_saliente = ? AND id_mensaje_entrante = otro_usuario) 
+            OR (id_mensaje_saliente = otro_usuario AND id_mensaje_entrante = ?) 
+        ORDER BY fecha_envio DESC LIMIT 1) AS ultimo_mensaje
+    FROM mensajes m
+    WHERE m.id_mensaje_saliente = ? OR m.id_mensaje_entrante = ?
+    GROUP BY otro_usuario
+    ORDER BY ultima_fecha DESC
+");
+$sql->bind_param("sssss", $id_usuario, $id_usuario, $id_usuario, $id_usuario, $id_usuario);
+$sql->execute();
+$resultado = $sql->get_result();
+```
+
+The query:
+- Retrieves all conversations for the current user
+- Shows the last message from each conversation
+- Orders by most recent message first
+- Groups messages by conversation partner
+
+### Chat List Item
+
+```php conversa.php
+while ($fila = $resultado->fetch_assoc()):
+    $otro = $fila["otro_usuario"];
+    $usuario_stmt = $_conexion->prepare("SELECT nombre, foto_perfil FROM usuario WHERE identificacion = ?");
+    $usuario_stmt->bind_param("s", $otro);
+    $usuario_stmt->execute();
+    $usuario_data = $usuario_stmt->get_result()->fetch_assoc();
+
+    $nombre = $usuario_data["nombre"] ?? "Usuario";
+    $foto = !empty($usuario_data["foto_perfil"]) ? $usuario_data["foto_perfil"] : '/src/img/perfil.png';
+    $mensaje = htmlspecialchars($fila["ultimo_mensaje"]);
+    $hora = date("H:i", strtotime($fila["ultima_fecha"]));
+?>
+    <a href="#<?= urlencode($otro) ?>" class="chat-item">
+        <img src="<?= htmlspecialchars($foto) ?>" alt="Perfil de <?= htmlspecialchars($nombre) ?>">
+        <div class="contenido-chat">
+            <span class="nombre"><?= htmlspecialchars($nombre) ?></span>
+            <span class="mensaje"><?= $mensaje ?></span>
+        </div>
+        <div class="hora"><?= $hora ?></div>
+    </a>
+<?php endwhile; ?>
+```
+
+Each chat item displays:
+- User's profile picture (or default if not set)
+- User's name
+- Last message preview
+- Message timestamp
+
+## Message Display
+
+### Chat Container
+
+```html conversa.php
+<div class="chat-box" id="chat-container" 
+     data-id-saliente="<?= $id_usuario ?>" 
+     data-id-entrante="<?= htmlspecialchars($otro_usuario ?? '') ?>">
+    <!-- Los mensajes se cargarán aquí -->
+    <?php if (!$otro_usuario): ?>
+        <div class="empty-chat text-center">
+            <i class="fas fa-comment-dots fa-3x mb-3" style="color: #e9ecef;"></i>
+            <h4>Selecciona un chat</h4>
+            <p class="text-muted">Elige una conversación para empezar a chatear</p>
+        </div>
+    <?php endif; ?>
+</div>
+```
+
+The chat container:
+- Uses data attributes to store user IDs
+- Shows placeholder when no chat is selected
+- Messages load dynamically via JavaScript
+
+### User Status Header
+
+```php conversa.php
+<?php if ($datos): ?>
+    <div class="details">
+        <div class="usuario-estado">
+            <span class="nombre-usuario"><?= htmlspecialchars($datos["nombre"]) ?></span>
+            <span class="estado <?= $estado === 'Online' ? 'online' : 'offline' ?>"></span>
+            <small class="ml-2"><?= $estado ?></small>
+        </div>
+        <p class="text-muted"><?= htmlspecialchars(($datos["marca"] ?? "") . " " . ($datos["modelo"] ?? "")) ?></p>
+    </div>
+<?php endif; ?>
+```
+
+The header shows:
+- User's name
+- Online/offline status indicator
+- Vehicle information (when chatting about a specific car)
+
+## Real-Time Messaging
+
+### JavaScript Chat Handler
+
+```javascript conversa.js
+document.addEventListener('DOMContentLoaded', function () {
+    const container = document.getElementById('chat-container');
+    const id_mensaje_saliente = container.getAttribute('data-id-saliente');
+    const id_mensaje_entrante = container.getAttribute('data-id-entrante');
+    const chatBox = document.querySelector('.chat-box');
+    const inputField = document.querySelector('.input-field');
+    const typingArea = document.querySelector('.typing-area');
+
+    // Prevenir que el dueño se escriba a sí mismo
+    if (id_mensaje_saliente === id_mensaje_entrante) {
+        alert("No puedes enviarte mensajes a ti mismo.");
+        typingArea.style.display = 'none';
+        return;
+    }
+
+    // Función para cargar los mensajes
+    function cargarMensajes() {
+        fetch(`get_messages.php?id_mensaje_saliente=${id_mensaje_saliente}&id_mensaje_entrante=${id_mensaje_entrante}`)
+            .then(response => response.text())
+            .then(data => {
+                chatBox.innerHTML = data;
+                chatBox.scrollTop = chatBox.scrollHeight;
+            })
+            .catch(error => console.error('Error al cargar los mensajes:', error));
+    }
+
+    setInterval(cargarMensajes, 4000);  // Recargar los mensajes cada 4 segundos
+    cargarMensajes();  // Llamar una vez al cargar la página
+});
+```
+
+<Check>
+  Messages automatically refresh every 4 seconds to provide near real-time updates without WebSocket complexity.
+</Check>
+
+### Sending Messages
+
+```javascript conversa.js
+// Manejar el envío de mensajes
+typingArea.addEventListener('submit', function(event) {
+    event.preventDefault();
+
+    const mensaje = inputField.value.trim();
+    if (mensaje === "") return;
+
+    const formData = new FormData();
+    formData.append('mensaje', mensaje);
+    formData.append('id_mensaje_entrante', id_mensaje_entrante);
+    formData.append('id_mensaje_saliente', id_mensaje_saliente);
+
+    fetch('send_message.php', {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.text())
+    .then(data => {
+        inputField.value = '';
+        cargarMensajes();
+    })
+    .catch(error => console.error('Error al enviar el mensaje:', error));
+});
+```
+
+### Enter Key Support
+
+```javascript conversa.js
+const mensajeInput = document.getElementById('mensajeInput');
+const messageForm = document.getElementById('messageForm');
+
+if (mensajeInput && messageForm) {
+    mensajeInput.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            messageForm.requestSubmit();
+        }
+    });
+}
+```
+
+<Note>
+  Users can send messages by pressing Enter (without Shift for new line).
+</Note>
+
+## Message Input Form
+
+```html conversa.php
+<?php if ($otro_usuario): ?>
+    <form class="typing-area" autocomplete="off" id="messageForm">
+        <textarea name="mensaje" class="input-field" id="mensajeInput" 
+                  placeholder="Escribe un mensaje..." required></textarea>
+        <button type="submit" aria-label="Enviar mensaje">
+            <i class="fab fa-telegram-plane"></i>
+        </button>
+    </form>
+<?php else: ?>
+    <div class="text-center p-3 bg-light">
+        <p class="m-0 text-muted">Selecciona un chat para empezar a conversar.</p>
+    </div>
+<?php endif; ?>
+```
+
+### Input Styling
+
+```css conversa.php
+.typing-area {
+    display: flex;
+    padding: 15px;
+    background:rgb(221, 251, 255);
+    border-radius: 70px;
+    border: 1px solid grey;
+}
+
+.input-field {
+    flex: 1;
+    border: 1px solid #e9ecef;
+    border-radius: 30px;
+    padding: 12px 20px;
+    font-size: 1rem;
+    outline: none;
+    resize: none;
+    height: 50px;
+    transition: all 0.3s ease;
+}
+
+.input-field:focus {
+    border-color: var(--accent-color);
+    box-shadow: 0 0 0 3px rgba(72, 149, 239, 0.2);
+}
+
+.typing-area button {
+    width: 50px;
+    height: 50px;
+    border: none;
+    border-radius: 50%;
+    background: var(--primary-color);
+    color: white;
+    margin-left: 10px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.typing-area button:hover {
+    background: var(--secondary-color);
+    transform: translateY(-2px);
+}
+```
+
+## Security Features
+
+### Self-Messaging Prevention
+
+```php conversa.php
+$id_usuario = $_SESSION["usuario"]["identificacion"];
+$otro_usuario = $_GET['chat_con'] ?? null;
+
+if ($otro_usuario !== null && $id_usuario === $otro_usuario) {
+    echo "No puedes enviarte mensajes a ti mismo.";
+    exit();
+}
+```
+
+```javascript conversa.js
+if (id_mensaje_saliente === id_mensaje_entrante) {
+    alert("No puedes enviarte mensajes a ti mismo.");
+    typingArea.style.display = 'none';
+    return;
+}
+```
+
+### Input Validation
+
+- Empty messages are prevented from sending
+- Messages are sanitized on the server side
+- HTML special characters are escaped to prevent XSS
+
+## Empty State Handling
+
+```php conversa.php
+<?php if ($resultado->num_rows === 0): ?>
+    <div class="text-center p-3">
+        <i class="fas fa-comment-slash fa-2x mb-2" style="color: #adb5bd;"></i>
+        <p>No tienes chats aún</p>
+    </div>
+<?php endif; ?>
+```
+
+## Chat Context
+
+When initiated from a vehicle listing, the chat includes car information:
+
+```php conversa.php
+$matricula = $_GET['matricula'] ?? null;
+
+if ($matricula !== null) {
+    $sql = $_conexion->prepare("
+        SELECT c.*, u.*
+        FROM coche c
+        JOIN usuario u ON c.id_usuario = u.identificacion
+        WHERE c.matricula = ?
+    ");
+    $sql->bind_param("s", $matricula);
+    $sql->execute();
+    $resultado = $sql->get_result();
+
+    if ($resultado->num_rows > 0) {
+        $datos = $resultado->fetch_assoc();
+    }
+
+    $estado = (!empty($datos) && $datos["estado"] == 0) ? "Offline" : "Online";
+}
+```
+
+This allows renters to:
+- View the car they're inquiring about
+- See the owner's information
+- Discuss rental specifics in context
+
+## Animations
+
+```css conversa.php
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.chat-item {
+    animation: fadeIn 0.3s ease forwards;
+}
+```
+
+## Best Practices
+
+<AccordionGroup>
+  <Accordion title="Message Etiquette">
+    - Be respectful and professional
+    - Clearly state your rental needs
+    - Respond promptly to inquiries
+    - Confirm booking details in writing
+  </Accordion>
+  
+  <Accordion title="Privacy">
+    - Don't share sensitive personal information
+    - Use the platform's payment system
+    - Report suspicious behavior
+  </Accordion>
+  
+  <Accordion title="Performance">
+    - Messages refresh every 4 seconds
+    - Old messages are retained for reference
+    - Conversation list shows most recent first
+  </Accordion>
+</AccordionGroup>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Make a Booking" icon="calendar-check">
+    Finalize rental details and dates
+  </Card>
+  <Card title="Payment" icon="credit-card">
+    Complete secure payment
+  </Card>
+</CardGroup>

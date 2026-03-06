@@ -1,0 +1,543 @@
+---
+title: 'Payment System'
+description: 'Secure PayPal integration for rentals and subscription payments'
+icon: 'credit-card'
+---
+
+## Overview
+
+SocialiCar uses PayPal as its payment processor to handle both vehicle rental payments and subscription plan purchases. The system provides a secure, user-friendly payment experience with real-time transaction processing.
+
+## Payment Types
+
+The platform supports two distinct payment flows:
+
+<CardGroup cols={2}>
+  <Card title="Vehicle Rentals" icon="car">
+    One-time payments for renting vehicles, calculated based on daily rates.
+  </Card>
+  <Card title="Subscriptions" icon="crown">
+    Recurring monthly payments for Básica and Premium subscription tiers.
+  </Card>
+</CardGroup>
+
+## Payment Initialization
+
+All payments begin through a centralized initialization endpoint:
+
+<CodeGroup>
+
+```php iniciar_pago.php:1-42
+<?php
+session_start();
+
+if (!isset($_SESSION['usuario'])) {
+    header("Location: ../../../");
+    exit();
+}
+
+if (!isset($_GET['tipo'])) {
+    die("Solicitud inválida");
+}
+
+$tipo = $_GET['tipo'];
+
+switch ($tipo) {
+    case 'coche':
+        if (!isset($_GET['precio_coche']) || !is_numeric($_GET['precio_coche'])) {
+            die("Precio del coche inválido");
+        }
+
+        $precio_coche = floatval($_GET['precio_coche']);
+        $_SESSION['precio_pago'] = $precio_coche;
+        $_SESSION['concepto_pago'] = "Pago de Alquiler de coche";
+
+        header("Location: paypal.php?page=");
+        exit();
+    case 'basica':
+        $_SESSION['precio_pago'] = 9.99;
+        $_SESSION['concepto_pago'] = "Pago de Suscripción Básica";
+        header("Location: paypal.php?page=planes");
+        exit();
+    case 'premium':
+        $_SESSION['precio_pago'] = 19.99;
+        $_SESSION['concepto_pago'] = "Pago de Suscripción Premium";
+        header("Location: paypal.php?page=planes");
+        exit();
+    default:
+        die("Tipo de suscripción no válido");
+}
+?>
+```
+
+</CodeGroup>
+
+<Info>
+Payment details are stored in the session to maintain state during the PayPal checkout flow.
+</Info>
+
+## Vehicle Rental Payments
+
+### Initiating a Rental Payment
+
+From the vehicle detail page, users can initiate payment:
+
+<CodeGroup>
+
+```html coche.php:432-436
+<form action="" method="post" class="flex-grow-1">
+    <a href="#.php?tipo=coche&precio_coche=<?= $precio; ?>" 
+       class="btn btn-success btn-lg w-100">
+        <i class="bi bi-cart-plus me-2"></i> Alquilar
+    </a>
+</form>
+```
+
+</CodeGroup>
+
+The price is passed as a URL parameter and validated before processing.
+
+### Payment Validation
+
+<Warning>
+The system validates that:
+- User is authenticated (`$_SESSION['usuario']` exists)
+- Payment type is specified
+- For vehicle rentals, the price is numeric and valid
+</Warning>
+
+## Subscription Payments
+
+### Subscription Plans
+
+SocialiCar offers two paid subscription tiers:
+
+<Tabs>
+  <Tab title="Básica - €9.99/month">
+    <CodeGroup>
+    
+    ```php iniciar_pago.php:27-32
+    case 'basica':
+        $_SESSION['precio_pago'] = 9.99;
+        $_SESSION['concepto_pago'] = "Pago de Suscripción Básica";
+        header("Location: paypal.php?page=planes");
+        exit();
+    ```
+    
+    </CodeGroup>
+    
+    **Features:**
+    - Vehicle location mapping
+    - Promote up to 3 listings
+    - Standard support
+  </Tab>
+  <Tab title="Premium - €19.99/month">
+    <CodeGroup>
+    
+    ```php iniciar_pago.php:33-38
+    case 'premium':
+        $_SESSION['precio_pago'] = 19.99;
+        $_SESSION['concepto_pago'] = "Pago de Suscripción Premium";
+        header("Location: paypal.php?page=planes");
+        exit();
+    ```
+    
+    </CodeGroup>
+    
+    **Features:**
+    - All Básica features
+    - Unlimited promoted listings
+    - 24/7 premium support
+    - Exclusive offers
+    - Priority in reservations
+    - Early access to new features
+  </Tab>
+</Tabs>
+
+### Subscription Purchase Flow
+
+From the plans page:
+
+<CodeGroup>
+
+```html planes.php:138-139
+<a href="#.php?tipo=basica" 
+   class="btn btn-basic btn-plan suscribirse">Suscribirse</a>
+```
+
+```html planes.php:164
+<a href="#.php?tipo=premium" 
+   class="btn btn-premium btn-plan suscribirse">Suscribirse</a>
+```
+
+</CodeGroup>
+
+## PayPal Integration
+
+### PayPal SDK Setup
+
+The payment page loads the PayPal JavaScript SDK:
+
+<CodeGroup>
+
+```html paypal.php:32
+<script src="https://www.paypal.com/sdk/js?client-id=ASaIpZ9AP6RkpKYB4dWGHafi71n5tEcfPp5LekIM9kW-kFcHlsrM36OD1kn6aOF2aHm8EboE_kHkSNn7&currency=EUR"></script>
+```
+
+</CodeGroup>
+
+<Note>
+The SDK is configured for EUR currency to match the European market focus.
+</Note>
+
+### Payment Interface
+
+The payment page displays transaction details before checkout:
+
+<CodeGroup>
+
+```php paypal.php:128-148
+<?php 
+$precio = $_SESSION['precio_pago'] ?? 0.0;
+$concepto = $_SESSION['concepto_pago'] ?? "Pago desconocido";
+?>
+
+<div class="payment-summary">
+    <i class="fas fa-credit-card fa-3x mb-3" style="color: var(--primary-color);"></i>
+    <p><strong>Concepto:</strong> <?= htmlspecialchars($concepto) ?></p>
+    <div class="payment-amount"><?= number_format($precio, 2) ?>€</div>
+    <p class="text-muted">Pago seguro a través de PayPal</p>
+</div>
+
+<div id="paypal-button-conteiner"></div>
+
+<div class="text-center">
+    <a href="# ? '../usuario/planes.php' : '../rentacar/mostrar_coches.php' ?>" 
+       class="back-link">
+        <i class="fas fa-arrow-left me-2"></i> Volver atrás
+    </a>
+</div>
+```
+
+</CodeGroup>
+
+### PayPal Button Configuration
+
+<CodeGroup>
+
+```javascript paypal.php:168-174
+paypal.Buttons({
+    style:{
+        color: 'blue',
+        shape: 'pill',
+        height: 45,
+        label: 'pay'
+    },
+    // ... handlers
+}).render('#paypal-button-conteiner');
+```
+
+</CodeGroup>
+
+### Order Creation
+
+<CodeGroup>
+
+```javascript paypal.php:175-184
+createOrder: function(data, actions){
+    return actions.order.create({
+        purchase_units:[{
+            amount:{
+                value: precio
+            },
+            description: concepto
+        }] 
+    });
+},
+```
+
+</CodeGroup>
+
+## Payment Flow Handlers
+
+### Successful Payment
+
+When a payment is approved:
+
+<CodeGroup>
+
+```javascript paypal.php:185-199
+onApprove: function(data, actions){
+    actions.order.capture().then(function(detalles){
+        Swal.fire({
+            title: '¡Pago completado!',
+            text: 'Tu transacción se ha realizado con éxito.',
+            icon: 'success',
+            confirmButtonColor: 'var(--primary-color)'
+        }).then(() => {
+            if (page !== "") {
+                window.location.href = "../usuario/planes.php";
+            } else {
+                window.location.href = "../rentacar/mostrar_coches.php";
+            }
+        });
+    });
+},
+```
+
+</CodeGroup>
+
+<Check>Users receive a success confirmation modal before being redirected.</Check>
+
+### Payment Cancellation
+
+<CodeGroup>
+
+```javascript paypal.php:200-213
+onCancel: function(data){
+    Swal.fire({
+        title: 'Pago cancelado',
+        text: 'No se ha completado el proceso de pago.',
+        icon: 'info',
+        confirmButtonColor: 'var(--primary-color)'
+    }).then(() => {
+        if (page != ""){
+            window.location.href = "../usuario/planes.php";
+        } else{
+            window.location.href = "../rentacar/mostrar_coches.php";
+        }
+    });
+},
+```
+
+</CodeGroup>
+
+### Payment Errors
+
+<CodeGroup>
+
+```javascript paypal.php:214-222
+onError: function(err) {
+    Swal.fire({
+        title: 'Error en el pago',
+        text: 'Ocurrió un error al procesar tu pago. Por favor, intenta nuevamente.',
+        icon: 'error',
+        confirmButtonColor: 'var(--primary-color)'
+    });
+}
+```
+
+</CodeGroup>
+
+## Session Management
+
+### Storing Payment Data
+
+<CodeGroup>
+
+```php
+// Example: Setting up a rental payment
+$_SESSION['precio_pago'] = 45.50;
+$_SESSION['concepto_pago'] = "Pago de Alquiler de coche";
+```
+
+</CodeGroup>
+
+### Retrieving Payment Data
+
+<CodeGroup>
+
+```php paypal.php:129-130
+$precio = $_SESSION['precio_pago'] ?? 0.0;
+$concepto = $_SESSION['concepto_pago'] ?? "Pago desconocido";
+```
+
+</CodeGroup>
+
+<Info>
+Default values are provided in case session data is missing, preventing errors.
+</Info>
+
+## Security Measures
+
+<AccordionGroup>
+  <Accordion title="Authentication Check">
+    <CodeGroup>
+    
+    ```php iniciar_pago.php:4-7
+    if (!isset($_SESSION['usuario'])) {
+        header("Location: ../../../");
+        exit();
+    }
+    ```
+    
+    </CodeGroup>
+    
+    All payment pages verify user authentication before proceeding.
+  </Accordion>
+  
+  <Accordion title="Input Validation">
+    <CodeGroup>
+    
+    ```php iniciar_pago.php:17-19
+    if (!isset($_GET['precio_coche']) || !is_numeric($_GET['precio_coche'])) {
+        die("Precio del coche inválido");
+    }
+    ```
+    
+    </CodeGroup>
+    
+    Vehicle rental prices are validated to ensure they are numeric values.
+  </Accordion>
+  
+  <Accordion title="Type Validation">
+    <CodeGroup>
+    
+    ```php iniciar_pago.php:9-11
+    if (!isset($_GET['tipo'])) {
+        die("Solicitud inválida");
+    }
+    ```
+    
+    </CodeGroup>
+    
+    Payment type must be specified and valid (coche, basica, or premium).
+  </Accordion>
+  
+  <Accordion title="XSS Protection">
+    <CodeGroup>
+    
+    ```php paypal.php:145
+    <p><strong>Concepto:</strong> <?= htmlspecialchars($concepto) ?></p>
+    ```
+    
+    </CodeGroup>
+    
+    Output is sanitized using `htmlspecialchars()` to prevent XSS attacks.
+  </Accordion>
+</AccordionGroup>
+
+## User Interface Styling
+
+The payment page features a modern, trustworthy design:
+
+<CodeGroup>
+
+```css paypal.php:52-57
+.payment-container {
+    backdrop-filter: blur(5px);
+    background-color: rgba(255, 255, 255, 0.85);
+    border-radius: 15px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+    overflow: hidden;
+}
+```
+
+```css paypal.php:60-65
+.payment-header {
+    background: linear-gradient(to right, var(--primary-color), var(--secondary-color));
+    color: white;
+    padding: 1.5rem;
+    text-align: center;
+}
+```
+
+```css paypal.php:93-97
+.payment-amount {
+    font-size: 2rem;
+    font-weight: 700;
+    color: var(--primary-color);
+    margin: 1rem 0;
+}
+```
+
+</CodeGroup>
+
+## Payment Flow Diagram
+
+<Steps>
+  <Step title="User Initiates Payment">
+    User clicks "Alquilar" button on vehicle page or "Suscribirse" on plans page.
+  </Step>
+  <Step title="Payment Initialization">
+    System validates user authentication, payment type, and amount.
+  </Step>
+  <Step title="Session Storage">
+    Payment details stored in `$_SESSION` for transaction continuity.
+  </Step>
+  <Step title="PayPal Page">
+    User redirected to payment page with PayPal button.
+  </Step>
+  <Step title="Order Creation">
+    PayPal order created with amount and description from session.
+  </Step>
+  <Step title="User Authorization">
+    User logs into PayPal and authorizes the payment.
+  </Step>
+  <Step title="Payment Capture">
+    System captures the authorized payment.
+  </Step>
+  <Step title="Confirmation">
+    Success modal displayed, user redirected to appropriate page.
+  </Step>
+</Steps>
+
+## Return URLs
+
+After payment completion or cancellation, users are redirected:
+
+<CodeGroup>
+
+```javascript
+// For subscription payments
+if (page !== "") {
+    window.location.href = "../usuario/planes.php";
+}
+
+// For rental payments
+else {
+    window.location.href = "../rentacar/mostrar_coches.php";
+}
+```
+
+</CodeGroup>
+
+## Testing Considerations
+
+<Warning>
+The current implementation uses a production PayPal client ID. For development:
+- Use PayPal Sandbox credentials
+- Test with sandbox accounts
+- Verify all payment states (success, cancel, error)
+</Warning>
+
+## Key Features
+
+<CardGroup cols={2}>
+  <Card title="Dual Payment Types" icon="split">
+    Handles both one-time rental payments and recurring subscriptions.
+  </Card>
+  <Card title="Secure Processing" icon="shield-check">
+    PayPal integration ensures PCI-compliant payment handling.
+  </Card>
+  <Card title="User Feedback" icon="bell">
+    Clear success, error, and cancellation messages using SweetAlert2.
+  </Card>
+  <Card title="Session-Based Flow" icon="server">
+    Maintains payment context throughout the checkout process.
+  </Card>
+</CardGroup>
+
+## Best Practices
+
+<Check>Always verify user authentication before processing payments</Check>
+<Check>Validate all payment amounts and types server-side</Check>
+<Check>Sanitize all output to prevent XSS vulnerabilities</Check>
+<Check>Provide clear feedback for all payment outcomes</Check>
+<Check>Use HTTPS in production for secure data transmission</Check>
+
+## Related Features
+
+- [Search & Filters](/features/search-filters) - Find vehicles to rent
+- [User Profiles](/features/user-profiles) - Manage subscriptions and rentals
+- [Reviews & Ratings](/features/reviews-ratings) - Leave feedback after rentals

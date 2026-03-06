@@ -1,0 +1,364 @@
+---
+title: 'Reservations API'
+description: 'Vehicle reservation and booking management endpoints'
+---
+
+## Overview
+
+The Reservations API handles vehicle bookings, availability checks, and reservation management in the SocialiCar platform.
+
+## Search Available Vehicles
+
+Search for available vehicles based on location and date range.
+
+**Endpoint:** `GET /src/pages/rentacar/mostrar_coches.php`
+
+### Query Parameters
+
+<ParamField query="provincia" type="string">
+  Province name to search in. Case-insensitive.
+</ParamField>
+
+<ParamField query="fecha_inicio" type="date">
+  Start date for reservation. Format: `YYYY-MM-DD`
+</ParamField>
+
+<ParamField query="fecha_final" type="date">
+  End date for reservation. Format: `YYYY-MM-DD`
+</ParamField>
+
+### Search Without Filters
+
+If no query parameters provided, displays all available vehicles organized by user subscription tier.
+
+### Search With Filters
+
+Returns vehicles that are:
+1. Located in the specified province
+2. Available during the requested date range
+3. Not already reserved during overlapping dates
+
+### Premium Vehicles Query
+
+```sql
+SELECT coche.*, sus.tipo AS tipo_suscripcion
+FROM coche
+JOIN usuario ON coche.id_usuario = usuario.identificacion
+JOIN suscripcion_usuario sus 
+    ON sus.identificacion = usuario.identificacion 
+    AND sus.activo = TRUE 
+    AND sus.tipo = 'Premium'
+WHERE coche.provincia = ?
+AND NOT EXISTS (
+    SELECT 1 FROM reserva_coche 
+    WHERE reserva_coche.matricula = coche.matricula 
+    AND (
+        (? BETWEEN reserva_coche.fecha_inicio AND reserva_coche.fecha_final) OR
+        (? BETWEEN reserva_coche.fecha_inicio AND reserva_coche.fecha_final) OR
+        (reserva_coche.fecha_inicio BETWEEN ? AND ?) OR
+        (reserva_coche.fecha_final BETWEEN ? AND ?)
+    )
+)
+ORDER BY coche.precio ASC
+LIMIT 3
+```
+
+### Plus Vehicles Query
+
+```sql
+SELECT coche.*, sus.tipo AS tipo_suscripcion
+FROM coche
+JOIN usuario ON coche.id_usuario = usuario.identificacion
+JOIN suscripcion_usuario sus 
+    ON sus.identificacion = usuario.identificacion 
+    AND sus.activo = TRUE 
+    AND sus.tipo = 'Plus'
+WHERE coche.provincia = ?
+AND NOT EXISTS (
+    SELECT 1 FROM reserva_coche 
+    WHERE reserva_coche.matricula = coche.matricula 
+    AND (
+        (? BETWEEN reserva_coche.fecha_inicio AND reserva_coche.fecha_final) OR
+        (? BETWEEN reserva_coche.fecha_inicio AND reserva_coche.fecha_final) OR
+        (reserva_coche.fecha_inicio BETWEEN ? AND ?) OR
+        (reserva_coche.fecha_final BETWEEN ? AND ?)
+    )
+)
+ORDER BY coche.precio ASC
+LIMIT 6
+```
+
+### Standard Vehicles Query
+
+```sql
+SELECT coche.*, sus.tipo AS tipo_suscripcion
+FROM coche
+JOIN usuario ON coche.id_usuario = usuario.identificacion
+LEFT JOIN suscripcion_usuario sus 
+    ON sus.identificacion = usuario.identificacion 
+    AND sus.activo = TRUE
+WHERE sus.tipo IS NULL
+AND coche.provincia = ?
+AND NOT EXISTS (
+    SELECT 1 FROM reserva_coche 
+    WHERE reserva_coche.matricula = coche.matricula 
+    AND (
+        (? BETWEEN reserva_coche.fecha_inicio AND reserva_coche.fecha_final) OR
+        (? BETWEEN reserva_coche.fecha_inicio AND reserva_coche.fecha_final) OR
+        (reserva_coche.fecha_inicio BETWEEN ? AND ?) OR
+        (reserva_coche.fecha_final BETWEEN ? AND ?)
+    )
+)
+LIMIT 6
+```
+
+### Response Fields
+
+<ResponseField name="vehiculos" type="array">
+  Array of available vehicles
+  
+  <Expandable title="Vehicle Object">
+    <ResponseField name="matricula" type="string">
+      Vehicle license plate
+    </ResponseField>
+    
+    <ResponseField name="marca" type="string">
+      Vehicle brand
+    </ResponseField>
+    
+    <ResponseField name="modelo" type="string">
+      Vehicle model
+    </ResponseField>
+    
+    <ResponseField name="precio" type="float">
+      Daily rental price in euros
+    </ResponseField>
+    
+    <ResponseField name="ciudad" type="string">
+      City location
+    </ResponseField>
+    
+    <ResponseField name="codigo_postal" type="string">
+      Postal code
+    </ResponseField>
+    
+    <ResponseField name="provincia" type="string">
+      Province
+    </ResponseField>
+    
+    <ResponseField name="ruta_img_coche" type="string">
+      Path to vehicle image
+    </ResponseField>
+    
+    <ResponseField name="tipo_suscripcion" type="string">
+      Owner's subscription type: `Premium`, `Plus`, or `NULL`
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+### Example Request
+
+```
+GET /src/pages/rentacar/mostrar_coches.php?provincia=Málaga&fecha_inicio=2024-12-20&fecha_final=2024-12-27
+```
+
+---
+
+## Text Search Vehicles
+
+Search vehicles using a text query.
+
+**Endpoint:** `POST /src/pages/rentacar/mostrar_coches.php`
+
+### Request Parameters
+
+<ParamField path="buscar" type="string" required>
+  Search query. Searches across multiple vehicle fields.
+</ParamField>
+
+### Search Query
+
+```sql
+SELECT * FROM coche 
+WHERE 
+    precio LIKE '%{buscar}%' OR
+    marca LIKE '%{buscar}%' OR 
+    modelo LIKE '%{buscar}%' OR 
+    ciudad LIKE '%{buscar}%' OR 
+    codigo_postal LIKE '%{buscar}%' OR 
+    color LIKE '%{buscar}%' OR
+    descripcion LIKE '%{buscar}%' OR
+    combustible LIKE '%{buscar}%' OR
+    transmision LIKE '%{buscar}%' OR
+    provincia LIKE '%{buscar}%' OR
+    tipo_aparcamiento LIKE '%{buscar}%'
+```
+
+### Example Request
+
+```php
+$_POST = [
+    'buscar' => 'Toyota'
+];
+```
+
+---
+
+## Check Vehicle Availability
+
+The availability check is built into the search queries using the `NOT EXISTS` clause:
+
+### Availability Logic
+
+```sql
+NOT EXISTS (
+    SELECT 1 FROM reserva_coche 
+    WHERE reserva_coche.matricula = coche.matricula 
+    AND (
+        -- Requested start date falls within existing reservation
+        (? BETWEEN reserva_coche.fecha_inicio AND reserva_coche.fecha_final) OR
+        
+        -- Requested end date falls within existing reservation
+        (? BETWEEN reserva_coche.fecha_inicio AND reserva_coche.fecha_final) OR
+        
+        -- Existing reservation starts within requested period
+        (reserva_coche.fecha_inicio BETWEEN ? AND ?) OR
+        
+        -- Existing reservation ends within requested period
+        (reserva_coche.fecha_final BETWEEN ? AND ?)
+    )
+)
+```
+
+### Conflict Scenarios
+
+A vehicle is **NOT available** if:
+
+<Expandable title="Scenario 1: Requested dates overlap existing reservation start">
+  ```
+  Existing:  [====existing reservation====]
+  Requested:     [==requested==]
+  ```
+  The requested start date falls within an existing reservation.
+</Expandable>
+
+<Expandable title="Scenario 2: Requested dates overlap existing reservation end">
+  ```
+  Existing:  [====existing reservation====]
+  Requested:                  [==requested==]
+  ```
+  The requested end date falls within an existing reservation.
+</Expandable>
+
+<Expandable title="Scenario 3: Requested dates contain existing reservation">
+  ```
+  Existing:      [====existing====]
+  Requested: [=======requested========]
+  ```
+  An existing reservation falls entirely within the requested period.
+</Expandable>
+
+<Expandable title="Scenario 4: Existing reservation contains requested dates">
+  ```
+  Existing:  [=======existing========]
+  Requested:    [==requested==]
+  ```
+  The requested period falls entirely within an existing reservation.
+</Expandable>
+
+---
+
+## Get Vehicle Details
+
+Get detailed information about a specific vehicle for reservation.
+
+**Endpoint:** `GET /src/pages/rentacar/coche.php?matricula={matricula}`
+
+### Query Parameters
+
+<ParamField query="matricula" type="string" required>
+  Vehicle license plate
+</ParamField>
+
+### Database Queries
+
+```sql
+-- Get vehicle information
+SELECT * FROM coche WHERE matricula = ?
+
+-- Get vehicle extras
+SELECT * FROM extras_coche WHERE matricula = ?
+
+-- Get vehicle images
+SELECT ruta_img_coche FROM imagen_coche WHERE id_coche = ?
+
+-- Get vehicle owner information
+SELECT nombre, apellido, correo, telefono, foto_perfil 
+FROM usuario WHERE identificacion = ?
+```
+
+---
+
+## Subscription Tier Priority
+
+Vehicles are displayed in priority order based on owner subscription:
+
+<ResponseField name="Premium" type="tier">
+  - Highest priority in search results
+  - Limited to 3 vehicles per search
+  - Displayed with special badge
+  - Sorted by price (ascending)
+</ResponseField>
+
+<ResponseField name="Plus" type="tier">
+  - Medium priority
+  - Limited to 6 vehicles per search
+  - Sorted by price (ascending)
+</ResponseField>
+
+<ResponseField name="Standard" type="tier">
+  - Base priority
+  - Limited to 6 vehicles per search
+  - No subscription required
+</ResponseField>
+
+---
+
+## Filter Capabilities
+
+The search page provides multiple filter options:
+
+### Available Filters
+
+- **Marca** (Brand): Select from available brands
+- **Modelo** (Model): Select from available models
+- **Ubicación** (Location): Filter by city
+- **Tipo de Coche** (Vehicle Type): berlina, coupé, SUV, etc.
+- **Combustible** (Fuel): Diesel, Gasoline, Electric, Hybrid
+- **Precio Diario** (Daily Price): Range slider from €0 to €500
+- **Disponibilidad** (Availability): Date range picker
+- **Equipamiento** (Equipment): Feature checkboxes for extras
+
+### Equipment Filters
+
+<Expandable title="Equipment Filter Options">
+  - Mascotas (Pets allowed)
+  - Fumar (Smoking allowed)
+  - GPS
+  - Sensores de aparcamiento (Parking sensors)
+  - Cámara trasera (Rear camera)
+  - Control de crucero (Cruise control)
+  - Tracción 4x4 (4x4 traction)
+  - Baca (Roof rack)
+  - Portabicicletas (Bike rack)
+  - Portaequipajes (Luggage carrier)
+  - Portaesquís (Ski rack)
+  - Bluetooth
+  - WiFi
+  - Android CarPlay
+  - Apple CarPlay
+  - Aire acondicionado (Air conditioning)
+  - Asientos calefactables (Heated seats)
+  - Fijaciones ISOFIX (ISOFIX anchors)
+  - Adaptado para movilidad reducida (Adapted for reduced mobility)
+</Expandable>

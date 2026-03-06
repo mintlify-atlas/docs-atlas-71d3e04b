@@ -1,0 +1,291 @@
+---
+title: 'Users API'
+description: 'User profile management endpoints for viewing and updating user information'
+---
+
+## Overview
+
+The Users API provides endpoints for managing user profiles, including viewing profile information, updating user data, and managing profile pictures.
+
+## Get User Profile
+
+Retrieve the current user's profile information.
+
+**Endpoint:** `GET /src/pages/usuario/perfil_usuario.php`
+
+### Authentication
+
+Requires active session. Redirects to home if not authenticated.
+
+### Database Query
+
+```sql
+SELECT * FROM usuario WHERE identificacion = ?
+```
+
+### Response Fields
+
+<ResponseField name="identificacion" type="string">
+  User's unique identification number
+</ResponseField>
+
+<ResponseField name="nombre" type="string">
+  User's first name
+</ResponseField>
+
+<ResponseField name="apellido" type="string">
+  User's last name
+</ResponseField>
+
+<ResponseField name="correo" type="string">
+  User's email address
+</ResponseField>
+
+<ResponseField name="telefono" type="string">
+  User's phone number
+</ResponseField>
+
+<ResponseField name="foto_perfil" type="string">
+  Path to user's profile picture. Defaults to `/src/img/perfil.png` if not set.
+</ResponseField>
+
+<ResponseField name="estado" type="integer">
+  User online status: `1` for online, `0` for offline
+</ResponseField>
+
+### User's Vehicles
+
+The profile page also displays all vehicles owned by the user:
+
+```sql
+SELECT * FROM coche WHERE id_usuario = ?
+```
+
+---
+
+## Update User Profile
+
+Update user profile information.
+
+**Endpoint:** `POST /src/pages/usuario/editar_usuario.php`
+
+### Request Parameters
+
+<ParamField path="nombre" type="string" required>
+  New first name. Must contain only letters and valid characters.
+</ParamField>
+
+<ParamField path="apellido" type="string" required>
+  New last name. Must contain only letters and valid characters.
+</ParamField>
+
+<ParamField path="correo" type="string" required>
+  New email address. Must be valid format.
+</ParamField>
+
+<ParamField path="contrasena_original" type="string" required>
+  Current password for verification.
+</ParamField>
+
+<ParamField path="contrasena" type="string" required>
+  New password. Must be 7-20 characters with at least one uppercase, lowercase, and digit.
+</ParamField>
+
+<ParamField path="confirma_contrasena" type="string" required>
+  New password confirmation. Must match `contrasena`.
+</ParamField>
+
+<ParamField path="telefono" type="string" required>
+  New phone number. Must contain 9-15 digits.
+</ParamField>
+
+<ParamField path="identificacion" type="string" required>
+  Identification number. Format depends on user's `tipo_identificacion`.
+</ParamField>
+
+### Validation Rules
+
+<Expandable title="Name Validation">
+  ```php
+  if (!preg_match("/^[a-zA-Z áéióúÁÉÍÓÚñÑüÜ'-]+$/", $nuevo_nombre)) {
+      $err_nombre = "El nombre solo puede tener letras";
+  }
+  ```
+</Expandable>
+
+<Expandable title="Email Validation">
+  ```php
+  if (!filter_var($nuevo_correo, FILTER_VALIDATE_EMAIL)) {
+      $err_correo = "El correo tiene que tener el @ y el . bien colocados";
+  }
+  ```
+</Expandable>
+
+<Expandable title="Password Validation">
+  ```php
+  // Verify current password
+  if (!password_verify($contrasena_original, $contrasena)) {
+      $err_contrasena_original = "Por favor, inserte la contraseña actual";
+  }
+  
+  // Validate new password
+  if (!preg_match("/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).+$/", $nueva_contrasena)) {
+      $err_nueva_contrasena = "Debe tener al menos 1 mayúscula, 1 minúscula y 1 número";
+  }
+  ```
+</Expandable>
+
+<Expandable title="Identification Validation">
+  For DNI/NIF:
+  ```php
+  if (!preg_match("/^[0-9]{8}[A-Za-z]$/", $nueva_identificacion)) {
+      $err_identificacion = "Debe tener 8 dígitos y una letra al final";
+  }
+  ```
+  
+  For NIE:
+  ```php
+  if (!preg_match("/^[XYZ][0-9]{7}[A-Za-z]$/", $nueva_identificacion)) {
+      $err_identificacion = "Debe comenzar con X, Y o Z, seguido de 7 dígitos y una letra";
+  }
+  ```
+</Expandable>
+
+### Database Query
+
+```sql
+UPDATE usuario 
+SET nombre = ?, apellido = ?, correo = ?, contrasena = ?, telefono = ?, identificacion = ? 
+WHERE correo = ?
+```
+
+### Example Request
+
+```php
+$_POST = [
+    'nombre' => 'Juan',
+    'apellido' => 'García López',
+    'correo' => 'juan.garcia@example.com',
+    'contrasena_original' => 'OldPassword123',
+    'contrasena' => 'NewPassword123',
+    'confirma_contrasena' => 'NewPassword123',
+    'telefono' => '612345678',
+    'identificacion' => '12345678A'
+];
+```
+
+### Response
+
+On success, redirects to `/src/pages/usuario/perfil_usuario`
+
+---
+
+## Upload Profile Picture
+
+Upload or update user's profile picture.
+
+**Endpoint:** `POST /src/pages/usuario/perfil_usuario.php`
+
+### Request Parameters
+
+<ParamField path="img_perfil" type="file" required>
+  Profile image file. Accepted formats: JPEG, PNG, JPG, WEBP
+</ParamField>
+
+### File Upload Process
+
+```php
+// Validate file type
+$extensiones_permitidas = ["image/jpeg", "image/png", "image/jpg", "image/webp"];
+if (!in_array($tipo, $extensiones_permitidas)) {
+    $err_imagen_perfil = "El tipo de imagen no es válido.";
+}
+
+// Generate path
+$ruta_relativa = "/clients/img/" . $identificacion . "/perfil";
+$nuevo_nombre = "img_perfil." . $extension;
+
+// Create directory if not exists
+if (!is_dir($ruta_absoluta)) {
+    mkdir($ruta_absoluta, 0777, true);
+}
+
+// Move uploaded file
+move_uploaded_file($temporal, $ruta_final);
+```
+
+### Database Query
+
+```sql
+UPDATE usuario SET foto_perfil = ? WHERE identificacion = ?
+```
+
+### Storage Structure
+
+```
+/clients/img/
+  └── {identificacion}/
+      └── perfil/
+          └── img_perfil.{extension}
+```
+
+### Response
+
+<Expandable title="Success">
+  Updates database with new image path and displays updated profile picture.
+</Expandable>
+
+<Expandable title="Error">
+  - Invalid file type: `$err_imagen_perfil = "El tipo de imagen no es válido."`
+  - Upload failed: `$err_imagen_perfil = "No se pudo guardar la imagen."`
+</Expandable>
+
+---
+
+## User Vehicle Listings
+
+Get all vehicles owned by the current user.
+
+### Database Query
+
+```sql
+SELECT * FROM coche WHERE id_usuario = ?
+```
+
+### Vehicle Image Query
+
+```sql
+SELECT ruta_img_coche FROM imagen_coche WHERE id_coche = ? LIMIT 1
+```
+
+### Response Fields
+
+<ResponseField name="vehiculos" type="array">
+  Array of vehicle objects owned by the user
+  
+  <Expandable title="Vehicle Object Fields">
+    - `matricula` - Vehicle license plate
+    - `marca` - Vehicle brand
+    - `modelo` - Vehicle model
+    - `precio` - Daily rental price
+    - `ruta_img_coche` - Path to vehicle image
+  </Expandable>
+</ResponseField>
+
+---
+
+## User Status Management
+
+User online/offline status is automatically managed:
+
+### Set Online
+```sql
+UPDATE usuario SET estado = 1 WHERE identificacion = ?
+```
+Executed during login.
+
+### Set Offline
+```sql
+UPDATE usuario SET estado = 0 WHERE identificacion = ?
+```
+Executed during logout.

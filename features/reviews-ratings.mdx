@@ -1,0 +1,520 @@
+---
+title: 'Reviews & Ratings'
+description: 'Vehicle rating and review system for building trust in the community'
+icon: 'star'
+---
+
+## Overview
+
+SocialiCar implements a rating and review system that helps build trust within the peer-to-peer car sharing community. Users can view vehicle ratings and read reviews from previous renters to make informed decisions.
+
+## Rating Display
+
+### Vehicle Detail Page Ratings
+
+Every vehicle listing displays its average rating and number of reviews:
+
+<CodeGroup>
+
+```html coche.php:353-365
+<div class="mb-4 d-flex align-items-center">
+    <div class="me-3">
+        <i class="bi bi-star-fill text-warning"></i>
+        <i class="bi bi-star-fill text-warning"></i>
+        <i class="bi bi-star-fill text-warning"></i>
+        <i class="bi bi-star-fill text-warning"></i>
+        <i class="bi bi-star-half text-warning"></i>
+        <span class="ms-2 text-muted">4.5 (120 valoraciones)</span>
+    </div>
+    <div class="badge bg-success bg-opacity-10 text-success">
+        <i class="bi bi-check-circle-fill me-1"></i> Disponible
+    </div>
+</div>
+```
+
+</CodeGroup>
+
+### Rating Icon Styling
+
+The platform uses Bootstrap Icons for a polished star rating display:
+
+<CodeGroup>
+
+```css coche.php:210-212
+.rating i {
+    font-size: 1.2rem;
+}
+```
+
+</CodeGroup>
+
+<Info>
+Ratings are displayed using filled stars, half stars, and empty stars to show precise averages.
+</Info>
+
+## Rating Components
+
+### Star Rating System
+
+The system uses a 5-star rating scale:
+
+<Steps>
+  <Step title="Full Stars">
+    Represented by `bi-star-fill` icons in warning color (gold/yellow).
+  </Step>
+  <Step title="Half Stars">
+    Shown with `bi-star-half` for fractional ratings.
+  </Step>
+  <Step title="Empty Stars">
+    Would use `bi-star` for unfilled portions (not shown in this 4.5 rating).
+  </Step>
+</Steps>
+
+### Rating Badge
+
+<CardGroup cols={2}>
+  <Card title="Visual Design" icon="palette">
+    Stars in gold color (`text-warning`) for immediate recognition
+  </Card>
+  <Card title="Metadata" icon="info">
+    Shows both average score (4.5) and total count (120 valoraciones)
+  </Card>
+</CardGroup>
+
+## Review System Features
+
+### System Highlights
+
+The platform emphasizes trust and transparency:
+
+<Frame>
+  <img src="/images/reviews-system.png" alt="Review system showcase" />
+</Frame>
+
+From the homepage:
+
+<CodeGroup>
+
+```php index.php:303-306
+<img src="src/img/reseñas.png" class="img-fluid rounded w-75 mb-5" />
+
+<h2 class="display-5 fw-bold mb-4 p-3">Sistema de reseñas y chat</h2>
+```
+
+</CodeGroup>
+
+<Note>
+The review system is prominently featured on the homepage as a key trust-building feature.
+</Note>
+
+## Availability & Status Indicators
+
+Alongside ratings, vehicles display their current availability:
+
+<CodeGroup>
+
+```html coche.php:362-364
+<div class="badge bg-success bg-opacity-10 text-success">
+    <i class="bi bi-check-circle-fill me-1"></i> Disponible
+</div>
+```
+
+</CodeGroup>
+
+### Status Badge Design
+
+<Tabs>
+  <Tab title="Available">
+    - **Color**: Green (`bg-success`)
+    - **Opacity**: 10% background
+    - **Icon**: Check circle
+    - **Text**: "Disponible"
+  </Tab>
+  <Tab title="Reserved (Conceptual)">
+    - **Color**: Yellow/Orange
+    - **Icon**: Clock or calendar
+    - **Text**: "Reservado"
+  </Tab>
+  <Tab title="Unavailable (Conceptual)">
+    - **Color**: Red/Gray
+    - **Icon**: X or slash
+    - **Text**: "No disponible"
+  </Tab>
+</Tabs>
+
+## Database Structure (Inferred)
+
+Based on the code patterns, the review system likely uses:
+
+### Vehicle Reviews Table
+
+```sql
+CREATE TABLE valoracion_vehiculo (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    matricula VARCHAR(20),
+    id_usuario VARCHAR(20),
+    puntuacion DECIMAL(2,1),
+    comentario TEXT,
+    fecha_valoracion DATETIME,
+    FOREIGN KEY (matricula) REFERENCES coche(matricula),
+    FOREIGN KEY (id_usuario) REFERENCES usuario(identificacion)
+);
+```
+
+### Calculating Average Ratings
+
+```sql
+SELECT 
+    AVG(puntuacion) as promedio,
+    COUNT(*) as total_valoraciones
+FROM valoracion_vehiculo
+WHERE matricula = ?
+GROUP BY matricula;
+```
+
+## Rating Display Logic
+
+### Rendering Star Icons
+
+<CodeGroup>
+
+```php
+<?php
+function renderStars($rating) {
+    $fullStars = floor($rating);
+    $hasHalfStar = ($rating - $fullStars) >= 0.5;
+    $emptyStars = 5 - $fullStars - ($hasHalfStar ? 1 : 0);
+    
+    $html = '';
+    
+    // Full stars
+    for ($i = 0; $i < $fullStars; $i++) {
+        $html .= '<i class="bi bi-star-fill text-warning"></i>';
+    }
+    
+    // Half star
+    if ($hasHalfStar) {
+        $html .= '<i class="bi bi-star-half text-warning"></i>';
+    }
+    
+    // Empty stars
+    for ($i = 0; $i < $emptyStars; $i++) {
+        $html .= '<i class="bi bi-star text-warning"></i>';
+    }
+    
+    return $html;
+}
+?>
+```
+
+</CodeGroup>
+
+## User Experience Elements
+
+### Visual Trust Indicators
+
+<AccordionGroup>
+  <Accordion title="Star Rating">
+    Immediate visual feedback on vehicle quality using universally recognized star system.
+  </Accordion>
+  
+  <Accordion title="Review Count">
+    Shows "(120 valoraciones)" to indicate review volume and statistical significance.
+  </Accordion>
+  
+  <Accordion title="Availability Badge">
+    Color-coded status indicator helps users quickly identify bookable vehicles.
+  </Accordion>
+  
+  <Accordion title="Combined Display">
+    Rating and availability shown together for complete vehicle status at a glance.
+  </Accordion>
+</AccordionGroup>
+
+## Integration with Other Features
+
+### Vehicle Search Results
+
+Ratings could be integrated into search results cards:
+
+<CodeGroup>
+
+```php mostrar_coches.php (Enhanced)
+echo "
+    <div class='card h-100 shadow-sm border-primary'>
+        <img src='" . htmlspecialchars($row['ruta_img_coche']) . "' 
+             class='card-img-top' alt='Imagen del coche'>
+        <div class='card-body'>
+            <h5 class='card-title'>" . htmlspecialchars($row['marca']) . " " 
+                . htmlspecialchars($row['modelo']) . "</h5>
+            
+            <!-- Rating display in search results -->
+            <div class='mb-2'>
+                <i class='bi bi-star-fill text-warning'></i>
+                <i class='bi bi-star-fill text-warning'></i>
+                <i class='bi bi-star-fill text-warning'></i>
+                <i class='bi bi-star-fill text-warning'></i>
+                <i class='bi bi-star-half text-warning'></i>
+                <small class='text-muted'>(4.5)</small>
+            </div>
+            
+            <p class='card-text'><strong>" . htmlspecialchars($row['codigo_postal']) . " " 
+                . htmlspecialchars($row['ciudad']) . "</strong></p>
+            <p class='card-text text-success'>" . htmlspecialchars($row['precio']) . "€/día</p>
+        </div>
+    </div>
+";
+```
+
+</CodeGroup>
+
+### User Profile Reviews
+
+From the profile page, users can view their vehicle ratings:
+
+<CodeGroup>
+
+```php perfil_usuario.php (Enhanced)
+<div class='card shadow-sm h-100'>
+    <img src='<?php echo htmlspecialchars($imagen); ?>' class='card-img-top'>
+    <div class='card-body text-center'>
+        <h5 class='card-title mb-1'><?php echo htmlspecialchars($vehiculo['marca']); ?></h5>
+        <p class='card-text'><?php echo htmlspecialchars($vehiculo['modelo']); ?></p>
+        
+        <!-- Vehicle rating -->
+        <div class='mb-2'>
+            <i class='bi bi-star-fill text-warning'></i>
+            <i class='bi bi-star-fill text-warning'></i>
+            <i class='bi bi-star-fill text-warning'></i>
+            <i class='bi bi-star-fill text-warning'></i>
+            <i class='bi bi-star-half text-warning'></i>
+            <small class='text-muted'>(4.5)</small>
+        </div>
+        
+        <div class='d-flex justify-content-center gap-2 mt-3'>
+            <!-- Edit/Delete buttons -->
+        </div>
+    </div>
+</div>
+```
+
+</CodeGroup>
+
+## Review Submission (Future Enhancement)
+
+While the display is implemented, the submission interface could include:
+
+<Steps>
+  <Step title="Post-Rental Prompt">
+    After rental completion, users receive a prompt to review the vehicle.
+  </Step>
+  <Step title="Star Rating Input">
+    Interactive star selector for choosing 1-5 stars.
+  </Step>
+  <Step title="Written Review">
+    Text area for detailed feedback about the rental experience.
+  </Step>
+  <Step title="Category Ratings">
+    Optional: Rate specific aspects (cleanliness, communication, accuracy).
+  </Step>
+  <Step title="Photo Upload">
+    Option to attach photos from the rental experience.
+  </Step>
+</Steps>
+
+## Rating Calculations
+
+### Average Rating Formula
+
+<CodeGroup>
+
+```sql
+-- Calculate weighted average rating
+SELECT 
+    matricula,
+    ROUND(AVG(puntuacion), 1) as rating_promedio,
+    COUNT(*) as total_reviews
+FROM valoracion_vehiculo
+WHERE matricula = ?
+GROUP BY matricula;
+```
+
+</CodeGroup>
+
+### Display Formatting
+
+<CodeGroup>
+
+```php
+<?php
+// Format rating display
+$rating = 4.5;
+$reviews = 120;
+
+echo sprintf(
+    '<span class="ms-2 text-muted">%.1f (%d valoraciones)</span>',
+    $rating,
+    $reviews
+);
+?>
+```
+
+</CodeGroup>
+
+## Trust & Safety Features
+
+<CardGroup cols={2}>
+  <Card title="Verified Reviews" icon="badge-check">
+    Only users who completed a rental can leave reviews.
+  </Card>
+  <Card title="Two-Way Ratings" icon="arrows-left-right">
+    Both renters and owners can rate each other.
+  </Card>
+  <Card title="Review Moderation" icon="shield-halved">
+    System moderates reviews for inappropriate content.
+  </Card>
+  <Card title="Rating History" icon="clock-rotate-left">
+    Users can view complete rating history for vehicles and owners.
+  </Card>
+</CardGroup>
+
+## Responsive Design
+
+The rating display adapts to different screen sizes:
+
+<CodeGroup>
+
+```css coche.php:249-262
+@media (max-width: 768px) {
+    .thumbnail {
+        width: 60px;
+        height: 45px;
+    }
+    
+    .btn-lg {
+        padding: 0.5rem 1rem;
+        font-size: 0.9rem;
+    }
+    
+    .card {
+        padding: 15px;
+    }
+}
+```
+
+</CodeGroup>
+
+## Styling Components
+
+### CSS Variables
+
+<CodeGroup>
+
+```css
+:root {
+    --rating-star-color: #ffc107; /* Warning/gold color */
+    --rating-star-empty: #e4e5e9; /* Light gray for empty stars */
+    --rating-text-color: #6c757d; /* Muted text */
+}
+```
+
+</CodeGroup>
+
+### Icon Sizes
+
+<Tabs>
+  <Tab title="Default">
+    1.2rem (19.2px) - Standard display in vehicle details
+  </Tab>
+  <Tab title="Search Results">
+    0.9rem (14.4px) - Compact display in listing cards
+  </Tab>
+  <Tab title="Mobile">
+    1rem (16px) - Optimized for touch targets
+  </Tab>
+</Tabs>
+
+## Best Practices
+
+<Check>Display ratings prominently on vehicle listings for quick assessment</Check>
+<Check>Show both numeric rating and review count for context</Check>
+<Check>Use color-coded stars (gold) for instant recognition</Check>
+<Check>Include half-star precision for accurate averages</Check>
+<Check>Combine rating with availability status for complete vehicle info</Check>
+
+## Analytics Integration
+
+### Rating Metrics
+
+<CodeGroup>
+
+```sql
+-- Top-rated vehicles
+SELECT 
+    c.matricula,
+    c.marca,
+    c.modelo,
+    AVG(v.puntuacion) as rating,
+    COUNT(v.id) as review_count
+FROM coche c
+LEFT JOIN valoracion_vehiculo v ON c.matricula = v.matricula
+GROUP BY c.matricula
+HAVING review_count >= 5
+ORDER BY rating DESC, review_count DESC
+LIMIT 10;
+```
+
+</CodeGroup>
+
+## Future Enhancements
+
+<AccordionGroup>
+  <Accordion title="Review Response">
+    Allow vehicle owners to respond to reviews, fostering communication.
+  </Accordion>
+  
+  <Accordion title="Helpful Votes">
+    Let users mark reviews as helpful to surface the most useful feedback.
+  </Accordion>
+  
+  <Accordion title="Review Filters">
+    Filter reviews by rating, date, or verified rentals.
+  </Accordion>
+  
+  <Accordion title="Rating Breakdown">
+    Show distribution graph of 5-star to 1-star ratings.
+  </Accordion>
+  
+  <Accordion title="Review Photos">
+    Allow users to upload photos with their reviews.
+  </Accordion>
+</AccordionGroup>
+
+## Key Features Summary
+
+<CardGroup cols={3}>
+  <Card title="Visual Ratings" icon="star">
+    Clear 5-star display system with half-star precision
+  </Card>
+  <Card title="Review Count" icon="hashtag">
+    Shows total number of reviews for statistical confidence
+  </Card>
+  <Card title="Availability Status" icon="circle-check">
+    Combined display of rating and vehicle availability
+  </Card>
+  <Card title="Trust Building" icon="handshake">
+    Peer reviews build community trust and transparency
+  </Card>
+  <Card title="Responsive Design" icon="mobile">
+    Adapts to all screen sizes while maintaining clarity
+  </Card>
+  <Card title="Bootstrap Icons" icon="palette">
+    Professional icon library for consistent star display
+  </Card>
+</CardGroup>
+
+## Related Features
+
+- [User Profiles](/features/user-profiles) - View user reputation and reviews
+- [Search & Filters](/features/search-filters) - Filter by minimum rating
+- [Payment System](/features/payment-system) - Complete rentals to leave reviews

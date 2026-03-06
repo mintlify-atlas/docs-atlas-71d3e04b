@@ -1,0 +1,506 @@
+---
+title: Listing Your Car
+description: Complete guide to adding and managing vehicle listings on SocialiCar, including specifications, pricing, and extra features.
+---
+
+## Overview
+
+The car listing feature allows users to register their vehicles on the SocialiCar platform for peer-to-peer sharing. The system collects comprehensive vehicle information, validates all inputs, and supports extensive customization options.
+
+<Info>
+  Users must be logged in to list a vehicle. The system automatically associates the vehicle with the logged-in user's account.
+</Info>
+
+## Required Information
+
+### Basic Vehicle Information
+
+<CardGroup cols={2}>
+  <Card title="Identification" icon="id-badge">
+    - License plate (matricula)
+    - Brand/Make (marca)
+    - Model (modelo)
+    - Registration year (anno_matriculacion)
+  </Card>
+  <Card title="Specifications" icon="gauge">
+    - Mileage (kilometros)
+    - Fuel type (tipo_combustible)
+    - Vehicle type (tipo)
+    - Transmission (transmision)
+  </Card>
+  <Card title="Details" icon="circle-info">
+    - Color (color)
+    - Engine power (potencia)
+    - Number of doors (numero_puertas)
+    - Number of seats (numero_plazas)
+  </Card>
+  <Card title="Location" icon="location-dot">
+    - Full address (direccion)
+    - Parking type (tipo_aparcamiento)
+    - GPS coordinates (lat/lon)
+  </Card>
+</CardGroup>
+
+## Validation Rules
+
+### License Plate Validation
+
+The system supports both modern and legacy Spanish license plate formats:
+
+```php nuevo_coche.php
+if (empty($tmp_matricula)) {
+    $err_matricula = "Debes indicar la matrícula de tu coche";
+} else {
+    // Limpieza y normalización
+    $tmp_matricula = strtoupper($tmp_matricula);
+    $tmp_matricula = preg_replace("/[\s\-\.,:]/", "", $tmp_matricula);
+
+    // Validación de formato
+    $patron_actual = "/^[0-9]{4}[BCDFGHJKLMNPRSTVWXYZ]{3}$/";
+    $patron_antiguo = "/^[A-Z]{1,2}[0-9]{4,6}[A-Z]{0,2}$/";
+
+    if (!preg_match($patron_actual, $tmp_matricula) && !preg_match($patron_antiguo, $tmp_matricula)) {
+        $err_matricula = "La matrícula no es válida. Usa un formato correcto como 1234BCD o MA1234AB.";
+    } else {
+        // Verificación en base de datos
+        $obtenerMatricula = $_conexion->prepare("SELECT * FROM coche WHERE matricula = ?");
+        $obtenerMatricula->bind_param("s", $tmp_matricula);
+        $obtenerMatricula->execute();
+        $resultado = $obtenerMatricula->get_result();
+
+        if ($resultado->num_rows == 1) {
+            $err_matricula = "Ya existe un coche con esta matrícula";
+        } else {
+            $matricula = $tmp_matricula;
+        }
+    }
+}
+```
+
+**Supported formats:**
+- Modern: 4 digits + 3 letters (e.g., 1234BCD)
+- Legacy: 1-2 letters + 4-6 digits + 0-2 letters (e.g., MA1234AB)
+
+### Price Validation
+
+```php nuevo_coche.php
+if ($tmp_precio == "") {
+    $err_precio = "Debes indicar el precio de tu coche";
+} else {
+    if (!is_numeric($tmp_precio)) {
+        $err_precio = "El precio debe ser un número";
+    } else {
+        if ($tmp_precio < 15 || $tmp_precio > 500) {
+            $err_precio = "El precio debe estar entre 15 y 500";
+        } else {
+            $precio = $tmp_precio;
+        }
+    }
+}
+```
+
+<Note>
+  Daily rental prices must be between €15 and €500.
+</Note>
+
+### Address Validation
+
+Addresses must follow a specific format for Spain:
+
+```php nuevo_coche.php
+if ($tmp_direccion == "") {
+    $err_direccion = "Debes indicar la dirección de tu coche";
+} else {
+    // Dividimos la dirección por comas
+    $partes_direccion = explode(",", $tmp_direccion);
+    $total = count($partes_direccion);
+
+    // Verificamos que la dirección tiene al menos 5 partes
+    if ($total < 5) {
+        $err_direccion = "La dirección debe tener al menos 5 partes: Calle, Ciudad, Provincia, Código Postal, País.";
+    } else {
+        // Obtenemos las partes de la dirección
+        $ciudad = trim($partes_direccion[$total - 4]);
+        $provincia = trim($partes_direccion[$total - 3]);
+        $cp = trim($partes_direccion[$total - 2]);
+        $pais = trim($partes_direccion[$total - 1]);
+
+        // Validamos el formato del código postal
+        if (!is_numeric($cp) || strlen($cp) != 5) {
+            $err_direccion = "El código postal no tiene un formato válido. Debe tener 5 dígitos.";
+        } else {
+            if (strtolower($pais) !== "españa") {
+                $err_direccion = "La dirección debe estar en España.";
+            } else {
+                $direccion = $tmp_direccion;
+            }
+        }
+    }
+}
+```
+
+**Address format:** `Street, City, Province, Postal Code (5 digits), España`
+
+## Vehicle Specifications
+
+### Fuel Types
+
+Supported fuel types:
+
+```php nuevo_coche.php
+$lista_combustibles = [
+    "gasolina",
+    "diesel",
+    "hibrido",
+    "electrico",
+    "glp",
+    "gnc"
+];
+```
+
+<Tabs>
+  <Tab title="Gasolina">
+    Standard gasoline-powered vehicles
+  </Tab>
+  <Tab title="Diesel">
+    Diesel-powered vehicles
+  </Tab>
+  <Tab title="Híbrido">
+    Hybrid electric vehicles
+  </Tab>
+  <Tab title="Eléctrico">
+    Fully electric vehicles
+  </Tab>
+  <Tab title="GLP">
+    Liquefied petroleum gas vehicles
+  </Tab>
+  <Tab title="GNC">
+    Compressed natural gas vehicles
+  </Tab>
+</Tabs>
+
+### Vehicle Types
+
+```php nuevo_coche.php
+$lista_tipos = [
+    "berlina",
+    "coupe",
+    "deportivo",
+    "furgoneta",
+    "monovolumen",
+    "suv",
+    "pick-up",
+    "roadster",
+    "utilitario",
+    "familiar",
+    "autocaravana"
+];
+```
+
+### Transmission Types
+
+```php nuevo_coche.php
+$lista_transmision = [
+    "manual",
+    "automatico"
+];
+```
+
+### Parking Types
+
+```php nuevo_coche.php
+$lista_aparcamiento = [
+    "calle",
+    "garaje",
+    "parking"
+];
+```
+
+## Extra Features
+
+SocialiCar supports extensive customization with optional features:
+
+### Basic Features
+
+```php nuevo_coche.php
+if (isset($_POST['mascota']) && $_POST['mascota'] == 'on') {
+    $mascota = 1;
+} else {
+    $mascota = 0;
+}
+
+if (isset($_POST['fumar']) && $_POST['fumar'] == 'on') {
+    $fumar = 1;
+} else {
+    $fumar = 0;
+}
+```
+
+- **Pets allowed** (mascota)
+- **Smoking allowed** (fumar)
+
+### Driving Assistance
+
+<CardGroup cols={2}>
+  <Card title="GPS" icon="location-crosshairs">
+    GPS navigation system
+  </Card>
+  <Card title="Parking Sensors" icon="car-bump">
+    Parking assistance sensors
+  </Card>
+  <Card title="Rear Camera" icon="video">
+    Backup camera
+  </Card>
+  <Card title="Cruise Control" icon="gauge-simple-high">
+    Adaptive cruise control
+  </Card>
+  <Card title="4x4" icon="car-side">
+    Four-wheel drive
+  </Card>
+</CardGroup>
+
+### Comfort Features
+
+```php nuevo_coche.php
+if (isset($_POST['aire_acondicionado']) && $_POST['aire_acondicionado'] == 'on') {
+    $aire_acondicionado = 1;
+} else {
+    $aire_acondicionado = 0;
+}
+
+if (isset($_POST['asientos_calefactables']) && $_POST['asientos_calefactables'] == 'on') {
+    $asientos_calefactables = 1;
+} else {
+    $asientos_calefactables = 0;
+}
+
+if (isset($_POST['fijacion_isofix']) && $_POST['fijacion_isofix'] == 'on') {
+    $fijacion_isofix = 1;
+} else {
+    $fijacion_isofix = 0;
+}
+
+if (isset($_POST['movilidad_reducida']) && $_POST['movilidad_reducida'] == 'on') {
+    $movilidad_reducida = 1;
+} else {
+    $movilidad_reducida = 0;
+}
+```
+
+- Air conditioning
+- Heated seats
+- ISOFIX child seat anchors
+- Accessibility features for reduced mobility
+
+### Technology Features
+
+```php nuevo_coche.php
+if (isset($_POST['bluetooth']) && $_POST['bluetooth'] == 'on') {
+    $bluetooth = 1;
+} else {
+    $bluetooth = 0;
+}
+
+if (isset($_POST['wifi']) && $_POST['wifi'] == 'on') {
+    $wifi = 1;
+} else {
+    $wifi = 0;
+}
+
+if (isset($_POST['apple_carplay']) && $_POST['apple_carplay'] == 'on') {
+    $apple_carplay = 1;
+} else {
+    $apple_carplay = 0;
+}
+
+if (isset($_POST['android_carplay']) && $_POST['android_carplay'] == 'on') {
+    $android_carplay = 1;
+} else {
+    $android_carplay = 0;
+}
+```
+
+### Cargo Accessories
+
+- Roof rack (baca)
+- Bike rack (portabicicletas)
+- Luggage carrier (portaequipajes)
+- Ski rack (portaesquis)
+- Trailer hitch (bola_remolque)
+
+## Image Upload
+
+Vehicle listings require at least one photo:
+
+```php nuevo_coche.php
+if (!isset($_FILES['img']) || empty($_FILES['img']['name'][0])) {
+    $err_imagen = "Debes subir al menos una imagen de tu coche";
+    $rutas_imagenes = [];
+} else {
+    $tmp_imagen_nombres = $_FILES['img']['name'];
+    $tmp_imagen_ubi = $_FILES['img']['tmp_name'];
+    $tmp_imagen_tipos = $_FILES['img']['type'];
+    $imagen_errores = $_FILES['img']['error'];
+    $rutas_imagenes = [];
+
+    for ($i = 0; $i < count($tmp_imagen_nombres); $i++) {
+        if ($imagen_errores[$i] === 0 && isset($matricula, $marca)) {
+            $lista_imagenes = ["image/jpeg", "image/png", "image/jpg"];
+            if (!in_array($tmp_imagen_tipos[$i], $lista_imagenes)) {
+                $err_imagen = "El tipo de la imagen no es válido";
+                continue;
+            }
+
+            // Obtener la extensión de la imagen
+            $extension = str_replace("image/", ".", $tmp_imagen_tipos[$i]);
+
+            // Generar un nuevo nombre de imagen
+            $nuevo_nombre = $marca . "_img" . ($i + 1) . $extension;
+
+            // Ruta relativa
+            $ruta_relativa = "/clients/img/" . $_SESSION["usuario"]["identificacion"] . "/coche/" . $matricula;
+            $ruta_relativa_con_nombre = $ruta_relativa . "/" . $nuevo_nombre;
+
+            // Ruta absoluta del sistema
+            $ruta_absoluta = $_SERVER['DOCUMENT_ROOT'] . $ruta_relativa;
+            $ruta_absoluta_con_nombre = $ruta_absoluta . "/" . $nuevo_nombre;
+
+            // Crear carpeta si no existe
+            if (!is_dir($ruta_absoluta)) {
+                mkdir($ruta_absoluta, 0777, true);
+            }
+
+            // Mover imagen a la carpeta destino
+            if (move_uploaded_file($tmp_imagen_ubi[$i], $ruta_absoluta_con_nombre)) {
+                $rutas_imagenes[] = $ruta_relativa_con_nombre;
+            }
+        }
+    }
+}
+```
+
+**Image requirements:**
+- Formats: JPEG, JPG, PNG
+- At least 1 image required
+- Multiple images supported
+- Stored in user-specific directories
+
+## Brand and Model Selection
+
+The system integrates with the NHTSA Vehicle API for accurate brand and model data:
+
+```php nuevo_coche.php
+// API para obtener las marcas de coches
+$apiUrlMarcas = "https://vpic.nhtsa.dot.gov/api/vehicles/GetMakesForVehicleType/car?format=json";
+
+$curl = curl_init();
+curl_setopt($curl, CURLOPT_URL, $apiUrlMarcas);
+curl_setopt($curl, CURLOPT_RETURNTRANSFER, true);
+$respuesta = curl_exec($curl);
+
+if (curl_errno($curl)) {
+    // Error de cURL - usar marcas de ejemplo
+} else {
+    $httpCode = curl_getinfo($curl, CURLINFO_HTTP_CODE);
+    if ($httpCode === 200) {
+        $datos = json_decode($respuesta, true);
+        if (json_last_error() === JSON_ERROR_NONE && isset($datos['Results'])) {
+            $marcas = $datos['Results'];
+        }
+    }
+}
+curl_close($curl);
+```
+
+<Warning>
+  If the API is unavailable, the system falls back to a predefined list of common brands.
+</Warning>
+
+## Pricing Configuration
+
+The pricing system uses a range slider:
+
+```html nuevo_coche.php
+<div class="d-flex flex-column align-items-center">
+    <label id="totalPrecio" class="form-label fw-bold">
+        Precio Diario:
+        <span id="mostrarPrecio">
+            <?php if (isset($_POST['precio'])) echo $_POST['precio'] . "€";
+            else echo "15€"; ?>
+        </span>
+    </label>
+
+    <input type="range" class="form-range w-75" name="precio" id="precio" 
+           min="15" max="500" step="1" 
+           value="<?php if (isset($_POST['precio'])) echo $_POST['precio'];
+                   else echo '15'; ?>">
+
+    <div class="d-flex justify-content-between text-muted mt-1 w-75">
+        <span>15€</span>
+        <span>500€</span>
+    </div>
+</div>
+```
+
+## Form Structure
+
+The car listing form is organized into sections:
+
+<Steps>
+  <Step title="Basic Information">
+    Brand, model, registration year, and license plate
+  </Step>
+  <Step title="Vehicle Information">
+    Mileage, fuel type, vehicle type, transmission, color, power, doors, and seats
+  </Step>
+  <Step title="Pricing">
+    Daily rental price (€15-€500)
+  </Step>
+  <Step title="Location">
+    Address with GPS autocomplete and parking type
+  </Step>
+  <Step title="Images">
+    Upload multiple vehicle photos
+  </Step>
+  <Step title="Extras">
+    Optional features and equipment (modal popup)
+  </Step>
+</Steps>
+
+## Submission Process
+
+```html nuevo_coche.php
+<div class="row g-2 pt-3">
+    <div class="col-12 col-md-6">
+        <button type="button" class="btn btn-primary btn-lg w-100" 
+                data-bs-toggle="modal" data-bs-target="#miModal">
+            Extras
+        </button>
+    </div>
+    <div class="col-12 col-md-6">
+        <button type="submit" class="btn btn-primary btn-lg w-100">
+            Confirmar
+        </button>
+    </div>
+</div>
+```
+
+<Check>
+  All data is validated server-side before being stored in the database. The vehicle is immediately associated with the logged-in user's account.
+</Check>
+
+## Next Steps
+
+After listing your car:
+
+<CardGroup cols={2}>
+  <Card title="Manage Bookings" icon="calendar">
+    View and manage rental requests
+  </Card>
+  <Card title="Chat System" icon="message" href="/guides/chat-system">
+    Communicate with potential renters
+  </Card>
+  <Card title="Upgrade Subscription" icon="crown" href="/guides/subscriptions">
+    Boost visibility with premium plans
+  </Card>
+</CardGroup>
